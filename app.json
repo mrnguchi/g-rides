@@ -1,0 +1,36 @@
+{
+  "expo": {
+    "name": "G-Rides",
+    "slug": "g-rides",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/images/splash-icon.png"
+    },
+    "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0F172A",
+          "image": "./assets/images/logo.png",
+          "imageWidth": 165,
+          "resizeMode": "contain"
+        }
+      ],
+      "expo-font",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow G-Rides to use your location to find nearby cars."
+        }
+      ]
+    ]
+  }
+}

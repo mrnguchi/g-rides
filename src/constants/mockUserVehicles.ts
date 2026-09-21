@@ -1,0 +1,62 @@
+import type { UserVehicle } from '../types/vehicle';
+import { BONASSAMA_COORDINATE } from './mockVehicles';
+
+export const MOCK_USER_VEHICLES: readonly UserVehicle[] = [
+  {
+    category: 'SUV',
+    documents: [
+      {
+        id: 'document-personal-registration',
+        kind: 'registration',
+        name: 'Vehicle registration',
+        status: 'verified',
+      },
+    ],
+    fuelType: 'diesel',
+    id: 'garage-personal-land-cruiser',
+    image: require('../../assets/images/car-2.jpeg'),
+    lastKnownLocation: BONASSAMA_COORDINATE,
+    make: 'Toyota',
+    mileageKm: 68420,
+    model: 'Land Cruiser',
+    ownerUserId: 'current-user',
+    registrationNumber: 'LT 482 GR',
+    relationship: 'personal',
+    status: 'active',
+    transmission: 'automatic',
+    year: 2010,
+  },
+  {
+    category: 'Luxury SUV',
+    documents: [],
+    fuelType: 'diesel',
+    id: 'garage-fleet-range-rover',
+    image: require('../../assets/images/car-5.jpeg'),
+    make: 'Range Rover',
+    mileageKm: 41300,
+    model: 'Sport',
+    ownerUserId: 'current-user',
+    registrationNumber: 'LT 731 GR',
+    relationship: 'fleet',
+    status: 'active',
+    transmission: 'automatic',
+    year: 2022,
+  },
+  {
+    assignedUserId: 'current-user',
+    category: 'Luxury SUV',
+    documents: [],
+    fuelType: 'petrol',
+    id: 'garage-assigned-mercedes',
+    image: require('../../assets/images/car-4.jpeg'),
+    make: 'Mercedes-Benz',
+    model: 'GLE 350',
+    ownerUserId: 'owner-munoh',
+    registrationNumber: 'LT 915 GR',
+    relationship: 'assigned',
+    status: 'active',
+    transmission: 'automatic',
+    year: 2021,
+  },
+];
+

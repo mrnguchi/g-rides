@@ -30,7 +30,8 @@
         {
           "locationWhenInUsePermission": "Allow G-Rides to use your location to find nearby cars."
         }
-      ]
+      ],
+      "expo-status-bar"
     ]
   }
 }

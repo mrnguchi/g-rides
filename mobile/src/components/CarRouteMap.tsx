@@ -66,6 +66,7 @@ const mutedMapStyle: MapStyleElement[] = [
 ];
 
 type CarRouteMapProps = {
+  locationOnly?: { available: boolean; title: string; detail: string; markerLabel: string };
   destination: Coordinate;
   onInteractionChange?: (isActive: boolean) => void;
   origin: Coordinate;
@@ -113,9 +114,11 @@ function OriginMarker({ coordinate }: { coordinate: Coordinate }) {
 function DestinationMarker({
   coordinate,
   vehicle,
+  label,
 }: {
   coordinate: Coordinate;
   vehicle: Vehicle;
+  label?: string;
 }) {
   const tracksViewChanges = useFreezeMarker();
 
@@ -132,7 +135,7 @@ function DestinationMarker({
             {vehicle.brand} {vehicle.model}
           </Text>
           <Text style={styles.vehicleMapAvailability}>
-            {vehicle.available ? 'Available' : 'Unavailable'}
+            {label ?? (vehicle.available ? 'Available' : 'Unavailable')}
           </Text>
         </View>
         <View style={styles.vehicleMapLabelTail} />
@@ -146,6 +149,7 @@ function DestinationMarker({
 }
 
 export function CarRouteMap({
+  locationOnly,
   destination,
   onInteractionChange,
   origin,
@@ -161,6 +165,7 @@ export function CarRouteMap({
   useEffect(() => {
     let isActive = true;
     setRoute(undefined);
+    if (locationOnly) return;
 
     getRoutePreview({ destination, origin }).then((preview) => {
       if (isActive) setRoute(preview);
@@ -170,6 +175,7 @@ export function CarRouteMap({
       isActive = false;
     };
   }, [
+    !!locationOnly,
     destination.latitude,
     destination.longitude,
     origin.latitude,
@@ -207,6 +213,7 @@ export function CarRouteMap({
   };
 
   const zoomMap = async (amount: number) => {
+    if (!isMapReady) return;
     const camera = await mapRef.current?.getCamera();
     if (!camera) return;
 
@@ -221,7 +228,7 @@ export function CarRouteMap({
   const focusOrigin = () => {
     mapRef.current?.animateToRegion(
       {
-        ...origin,
+        ...(locationOnly ? destination : origin),
         latitudeDelta: 0.007,
         longitudeDelta: 0.007,
       },
@@ -243,11 +250,12 @@ export function CarRouteMap({
       <MapView
         ref={mapRef}
         customMapStyle={mutedMapStyle}
+        provider={PROVIDER_GOOGLE}
         initialRegion={{
-          latitude: (origin.latitude + destination.latitude) / 2,
-          longitude: (origin.longitude + destination.longitude) / 2,
-          latitudeDelta: initialLatitudeDelta,
-          longitudeDelta: initialLongitudeDelta,
+          latitude: locationOnly ? destination.latitude : (origin.latitude + destination.latitude) / 2,
+          longitude: locationOnly ? destination.longitude : (origin.longitude + destination.longitude) / 2,
+          latitudeDelta: locationOnly ? 0.008 : initialLatitudeDelta,
+          longitudeDelta: locationOnly ? 0.008 : initialLongitudeDelta,
         }}
         loadingBackgroundColor={colors.surfaceGray}
         loadingEnabled
@@ -257,23 +265,22 @@ export function CarRouteMap({
         onMapReady={() => setIsMapReady(true)}
         paddingAdjustmentBehavior="never"
         pitchEnabled={false}
-        provider={PROVIDER_GOOGLE}
         rotateEnabled={false}
         scrollEnabled={isInteractive}
         showsBuildings={false}
         showsCompass={false}
         showsIndoors={false}
-        showsPointsOfInterest
+        showsPointsOfInterests
         style={StyleSheet.absoluteFill}
         toolbarEnabled={false}
         zoomEnabled={isInteractive}
       >
-        <Circle
+        {!locationOnly && <Circle
           center={origin}
           fillColor="rgba(37, 99, 235, 0.12)"
           radius={65}
           strokeColor="rgba(37, 99, 235, 0.06)"
-        />
+        />}
 
         {route && (
           <>
@@ -296,14 +303,14 @@ export function CarRouteMap({
           </>
         )}
 
-        <OriginMarker coordinate={origin} />
-        <DestinationMarker coordinate={destination} vehicle={vehicle} />
+        {!locationOnly && <OriginMarker coordinate={origin} />}
+        {(!locationOnly || locationOnly.available) && <DestinationMarker coordinate={destination} vehicle={vehicle} label={locationOnly?.markerLabel} />}
       </MapView>
 
       {!isInteractive && (
         <Pressable
           accessibilityHint="Activates one-finger panning and pinch zoom"
-          accessibilityLabel="Activate route map controls"
+          accessibilityLabel={locationOnly ? 'Activate location map controls' : 'Activate route map controls'}
           accessibilityRole="button"
           onPress={() => setInteraction(true)}
           style={styles.activationLayer}
@@ -314,7 +321,7 @@ export function CarRouteMap({
               name="hand-left-outline"
               size={15}
             />
-            <Text style={styles.mapGestureHintText}>Tap to explore route</Text>
+            <Text style={styles.mapGestureHintText}>{locationOnly ? 'Tap to explore map' : 'Tap to explore route'}</Text>
           </View>
         </Pressable>
       )}
@@ -323,14 +330,14 @@ export function CarRouteMap({
         <View style={styles.turnIconContainer}>
           <Ionicons
             color={colors.primaryBrandBlue}
-            name="arrow-redo"
+            name={locationOnly ? 'location-outline' : 'arrow-redo'}
             size={25}
           />
         </View>
         <View style={styles.instructionTextContainer}>
-          <Text style={styles.instructionTitle}>Route to vehicle</Text>
+          <Text style={styles.instructionTitle}>{locationOnly?.title ?? 'Route to vehicle'}</Text>
           <Text numberOfLines={1} style={styles.instructionText}>
-            {route?.instruction ?? 'Calculating route…'}
+            {locationOnly?.detail ?? route?.instruction ?? 'Calculating route…'}
           </Text>
           {route && (
             <Text style={styles.instructionDistance}>
@@ -341,7 +348,7 @@ export function CarRouteMap({
       </View>
 
       <Pressable
-        accessibilityLabel="Center map on your location"
+        accessibilityLabel={locationOnly ? 'Center location map' : 'Center map on your location'}
         accessibilityRole="button"
         onPress={focusOrigin}
         style={({ pressed }) => [
@@ -411,7 +418,7 @@ export function CarRouteMap({
         </View>
       </View>
 
-      <View style={styles.etaCard}>
+      {!locationOnly && <View style={styles.etaCard}>
         {route ? (
           <>
             <Ionicons
@@ -435,12 +442,12 @@ export function CarRouteMap({
         ) : (
           <ActivityIndicator color={colors.primaryBrandBlue} size="small" />
         )}
-      </View>
+      </View>}
 
       <Pressable
-        accessibilityLabel="Fit the full route on map"
+        accessibilityLabel={locationOnly ? 'Recenter location map' : 'Fit the full route on map'}
         accessibilityRole="button"
-        onPress={() => fitRoute()}
+        onPress={() => locationOnly ? focusOrigin() : fitRoute()}
         style={({ pressed }) => [
           styles.routeButton,
           pressed && styles.pressed,
@@ -561,7 +568,7 @@ const styles = StyleSheet.create({
     marginTop: -8,
   },
   activationLayer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
   },

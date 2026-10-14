@@ -1,7 +1,9 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { CarSearchBar } from '../components/CarSearchBar';
+import { ListingCarCard } from '../components/ListingCarCard';
+import { AppIcon } from '../components/AppIcon';
 import { StatusBar } from 'expo-status-bar';
 import * as Location from 'expo-location';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -16,27 +18,38 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
   HomeBottomNavigation,
-  NearbyCarsMap,
   NotificationSheet,
-  VehicleCategoryFilterBar,
-  VehicleCard,
 } from '../components';
 import type { MainTab } from '../components';
 import {
   BONASSAMA_COORDINATE,
-  MOCK_NEARBY_VEHICLES,
-  MOCK_RECOMMENDED_VEHICLES,
+  MOCK_HOME_VEHICLES,
 } from '../constants/mockVehicles';
-import { colors, fonts, layout } from '../theme';
+import { MOCK_RENTAL_HISTORY, MOCK_UPCOMING_RENTALS } from '../constants/mockRentals';
+import { colors, fonts, layout, moneyText } from '../theme';
 import type {
   Coordinate,
   Vehicle,
-  VehicleCategoryFilter,
 } from '../types/map';
 import type { AppNotification } from '../types/notification';
+import type { RentalRecord } from '../types/rental';
+import type { DiscoverCategory } from '../types/navigation';
 
 const homeLocationIcon = require('../../assets/images/home-location-icon.png');
 const profileImage = require('../../assets/images/10075.jpeg');
+const brands = [
+  { name: 'Toyota', image: require('../../assets/images/brands/toyota.png') },
+  { name: 'BMW', image: require('../../assets/images/brands/bmw.png') },
+  { name: 'Mercedes-Benz', image: require('../../assets/images/brands/benz.png') },
+  { name: 'Mitsubishi', image: require('../../assets/images/brands/mitsubishi.png') },
+  { name: 'Acura', image: require('../../assets/images/brands/acura.png') },
+] as const;
+const services = [
+  { name: 'Maintenance', category: 'Maintenance', image: require('../../assets/images/service icons/repair.png') },
+  { name: 'Spare Parts', category: 'Parts', image: require('../../assets/images/service icons/spare parts.png') },
+  { name: 'Roadside Help', category: 'Towing', image: require('../../assets/images/service icons/tow truck.png') },
+  { name: 'Insurance', category: 'Insurance', image: require('../../assets/images/service icons/insurance.png') },
+] as const;
 
 function formatAddress(
   address: Location.LocationGeocodedAddress | undefined,
@@ -76,6 +89,8 @@ type HomeScreenProps = {
   onMarkAllNotificationsRead?: () => void;
   onMarkNotificationRead?: (notificationId: string) => void;
   onOpenVehicle?: (vehicle: Vehicle, userLocation: Coordinate) => void;
+  onOpenRental?: (rental: RentalRecord) => void;
+  onOpenService?: (category: DiscoverCategory) => void;
   onTabPress?: (tab: MainTab) => void;
   unreadMessagesCount?: number;
 };
@@ -86,27 +101,26 @@ export function HomeScreen({
   onMarkAllNotificationsRead,
   onMarkNotificationRead,
   onOpenVehicle,
+  onOpenRental,
+  onOpenService,
   onTabPress,
   unreadMessagesCount = 0,
 }: HomeScreenProps) {
-  const [activeCategory, setActiveCategory] =
-    useState<VehicleCategoryFilter>('All Cars');
+  const [activeBrand, setActiveBrand] = useState<string | null>(null);
   const [center, setCenter] = useState<Coordinate>(BONASSAMA_COORDINATE);
-  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(
-    () => new Set(['toyota-land-cruiser-black']),
-  );
-  const [isAvailableOnly, setIsAvailableOnly] = useState(false);
-  const [isEmbeddedMapActive, setIsEmbeddedMapActive] = useState(false);
   const [isLocating, setIsLocating] = useState(true);
   const [isNotificationSheetVisible, setIsNotificationSheetVisible] =
     useState(false);
   const [locationLabel, setLocationLabel] = useState('Bonassama, Dla');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedVehicleId, setSelectedVehicleId] = useState<string>();
-  const nearbyCarouselRef = useRef<ScrollView>(null);
   const unreadNotificationCount = notifications.filter(
     (notification) => !notification.read,
   ).length;
+  const homeRentals = [
+    MOCK_RENTAL_HISTORY.find(({ id }) => id === 'rental-completed-yaris-2010'),
+    MOCK_UPCOMING_RENTALS.find(({ id }) => id === 'rental-upcoming-4runner'),
+    MOCK_RENTAL_HISTORY.find(({ id }) => id === 'rental-canceled-yaris-2012'),
+  ].filter((rental): rental is RentalRecord => Boolean(rental));
 
   useEffect(() => {
     let isMounted = true;
@@ -179,19 +193,17 @@ export function HomeScreen({
   const filteredVehicles = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
 
-    return MOCK_NEARBY_VEHICLES.filter((vehicle) => {
-      const matchesCategory =
-        activeCategory === 'All Cars' || vehicle.category === activeCategory;
-      const matchesAvailability = !isAvailableOnly || vehicle.available;
+    return MOCK_HOME_VEHICLES.filter((vehicle) => {
+      const matchesBrand = !activeBrand || vehicle.brand === activeBrand;
       const matchesSearch =
         !normalizedQuery ||
         `${vehicle.brand} ${vehicle.model} ${vehicle.category}`
           .toLowerCase()
           .includes(normalizedQuery);
 
-      return matchesCategory && matchesAvailability && matchesSearch;
+      return matchesBrand && vehicle.available && matchesSearch;
     });
-  }, [activeCategory, isAvailableOnly, searchQuery]);
+  }, [activeBrand, searchQuery]);
 
   const nearbyVehicles = useMemo(
     () =>
@@ -208,39 +220,13 @@ export function HomeScreen({
       })),
     [center.latitude, center.longitude, filteredVehicles],
   );
-
-  useEffect(() => {
-    if (
-      selectedVehicleId &&
-      !nearbyVehicles.some(({ id }) => id === selectedVehicleId)
-    ) {
-      setSelectedVehicleId(undefined);
-    }
-  }, [nearbyVehicles, selectedVehicleId]);
-
-  const toggleFavorite = (vehicleId: string) => {
-    setFavoriteIds((currentIds) => {
-      const nextIds = new Set(currentIds);
-      if (nextIds.has(vehicleId)) nextIds.delete(vehicleId);
-      else nextIds.add(vehicleId);
-      return nextIds;
-    });
-  };
-
-  const selectNearbyVehicle = useCallback(
-    (vehicle: Vehicle) => {
-      setSelectedVehicleId(vehicle.id);
-      const vehicleIndex = nearbyVehicles.findIndex(
-        ({ id }) => id === vehicle.id,
-      );
-
-      if (vehicleIndex >= 0) {
-        nearbyCarouselRef.current?.scrollTo({
-          animated: true,
-          x: vehicleIndex * 212,
-        });
-      }
-    },
+  const popularVehicles = useMemo(
+    () =>
+      ['toyota-4runner', 'toyota-yaris-2013', 'toyota-yaris-2012']
+        .flatMap((vehicleId) => {
+          const vehicle = nearbyVehicles.find(({ id }) => id === vehicleId);
+          return vehicle ? [vehicle] : [];
+        }),
     [nearbyVehicles],
   );
 
@@ -248,16 +234,11 @@ export function HomeScreen({
     <View style={styles.screen}>
       <StatusBar style="light" />
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        scrollEnabled={!isEmbeddedMapActive}
-        showsVerticalScrollIndicator={false}
-      >
+      <View style={styles.contentFrame}>
         <SafeAreaView edges={['top']} style={styles.header}>
           <View style={styles.headerTopRow}>
             <View style={styles.locationContainer}>
-              <Text style={styles.locationCaption}>Location</Text>
+              <Text style={styles.locationCaption}>Your Location</Text>
               <View style={styles.locationRow}>
                 <Image
                   resizeMode="contain"
@@ -283,11 +264,7 @@ export function HomeScreen({
                   pressed && styles.controlPressed,
                 ]}
               >
-                <Ionicons
-                  color={colors.white}
-                  name="notifications"
-                  size={22}
-                />
+                <AppIcon color={colors.white} name="notification" size={22} />
                 {unreadNotificationCount > 0 && (
                   <View style={styles.notificationDot} />
                 )}
@@ -296,6 +273,7 @@ export function HomeScreen({
               <Pressable
                 accessibilityLabel="Open profile"
                 accessibilityRole="button"
+                onPress={() => onTabPress?.('profile')}
                 style={({ pressed }) => [
                   styles.avatarButton,
                   pressed && styles.controlPressed,
@@ -306,150 +284,60 @@ export function HomeScreen({
             </View>
           </View>
 
-          <Text style={styles.heroTitle}>Find cars{`\n`}In your location</Text>
+          <Text style={styles.heroTitle}>Find your next car</Text>
         </SafeAreaView>
 
         <View style={styles.sheet}>
-          <View style={styles.searchRow}>
-            <View style={styles.searchContainer}>
-              <Ionicons
-                color={colors.textSecondary}
-                name="search-outline"
-                size={22}
-              />
-              <TextInput
-                autoCapitalize="none"
-                autoCorrect={false}
-                onChangeText={setSearchQuery}
-                placeholder="Search cars or location"
-                placeholderTextColor={colors.textSecondary}
-                returnKeyType="search"
-                style={styles.searchInput}
-                value={searchQuery}
-              />
-              {!!searchQuery && (
-                <Pressable
-                  accessibilityLabel="Clear search"
-                  hitSlop={8}
-                  onPress={() => setSearchQuery('')}
-                >
-                  <Ionicons
-                    color={colors.textSecondary}
-                    name="close-circle"
-                    size={19}
-                  />
-                </Pressable>
-              )}
+          <CarSearchBar value={searchQuery} onChangeText={setSearchQuery} onFilterPress={() => onTabPress?.('discover')} />
+
+          <ScrollView
+            style={styles.bodyScroller}
+            contentContainerStyle={styles.bodyContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+          <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Brands</Text>{activeBrand && <Pressable onPress={() => setActiveBrand(null)}><Text style={styles.exploreText}>See All</Text></Pressable>}</View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.brandList}>
+            {brands.map((brand) => <Pressable key={brand.name} accessibilityRole="button" accessibilityState={{ selected: activeBrand === brand.name }} onPress={() => setActiveBrand(activeBrand === brand.name ? null : brand.name)} style={styles.brandItem}>
+              <View style={[styles.brandCircle, activeBrand === brand.name && styles.brandCircleActive]}><Image source={brand.image} resizeMode="contain" style={styles.brandImage} /></View>
+              <Text numberOfLines={1} style={styles.brandName}>{brand.name === 'Mercedes-Benz' ? 'Mercedes' : brand.name}</Text>
+            </Pressable>)}
+          </ScrollView>
+          <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>{activeBrand ? `${activeBrand} cars` : 'Available Cars'}</Text><Pressable onPress={() => onTabPress?.('discover')}><Text style={styles.exploreText}>See All</Text></Pressable></View>
+          {nearbyVehicles.length ? <View>
+            {nearbyVehicles.map(vehicle => <ListingCarCard key={vehicle.id} vehicle={vehicle} onPress={() => onOpenVehicle?.(vehicle, center)} />)}
+          </View> : <View style={styles.emptyState}><Text style={styles.emptyTitle}>No cars found</Text><Text style={styles.emptyDescription}>Try another brand or search.</Text><Pressable onPress={() => { setActiveBrand(null); setSearchQuery(''); }}><Text style={styles.clearFiltersText}>Show all cars</Text></Pressable></View>}
+          {popularVehicles.length > 0 && <>
+            <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Popular Cars</Text><Pressable onPress={() => onTabPress?.('discover')}><Text style={styles.exploreText}>See All</Text></Pressable></View>
+            <View>
+              {popularVehicles.map(vehicle => <ListingCarCard key={vehicle.id} vehicle={vehicle} onPress={() => onOpenVehicle?.(vehicle, center)} />)}
             </View>
-
-            <Pressable
-              accessibilityLabel={
-                isAvailableOnly
-                  ? 'Show all cars'
-                  : 'Show only available cars'
-              }
-              accessibilityRole="button"
-              accessibilityState={{ selected: isAvailableOnly }}
-              onPress={() => setIsAvailableOnly((isActive) => !isActive)}
-              style={({ pressed }) => [
-                styles.filterButton,
-                isAvailableOnly && styles.filterButtonActive,
-                pressed && styles.controlPressed,
-              ]}
-            >
-              <Ionicons color={colors.white} name="options-outline" size={25} />
-            </Pressable>
+          </>}
+          <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Services</Text><Text style={styles.exploreText}>See all</Text></View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.serviceList}>
+            {services.map((service) => <Pressable key={service.name} accessibilityRole="button" onPress={() => onOpenService?.(service.category)} style={styles.serviceItem}>
+              <View style={styles.serviceCircle}><Image source={service.image} resizeMode="contain" style={styles.serviceImage} /></View>
+              <Text numberOfLines={1} style={styles.serviceName}>{service.name}</Text>
+            </Pressable>)}
+          </ScrollView>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Activity</Text>
+            <Pressable accessibilityRole="button" onPress={() => onTabPress?.('activity')}><Text style={styles.exploreText}>See all</Text></Pressable>
           </View>
-
-          <Text style={styles.sectionTitle}>Cars nearby</Text>
-          <VehicleCategoryFilterBar
-            activeCategory={activeCategory}
-            onCategoryChange={setActiveCategory}
-          />
-
-          <NearbyCarsMap
-            activeCategory={activeCategory}
-            center={center}
-            onCategoryChange={setActiveCategory}
-            onInteractionChange={setIsEmbeddedMapActive}
-            onVehiclePress={selectNearbyVehicle}
-            selectedVehicleId={selectedVehicleId}
-            vehicles={nearbyVehicles}
-          />
-
-          {nearbyVehicles.length ? (
-            <ScrollView
-              ref={nearbyCarouselRef}
-              contentContainerStyle={styles.featuredList}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.featuredScroller}
-            >
-              {nearbyVehicles.map((vehicle) => (
-                <VehicleCard
-                  key={vehicle.id}
-                  favorite={favoriteIds.has(vehicle.id)}
-                  onPress={() => {
-                    selectNearbyVehicle(vehicle);
-                    onOpenVehicle?.(vehicle, center);
-                  }}
-                  onToggleFavorite={() => toggleFavorite(vehicle.id)}
-                  selected={selectedVehicleId === vehicle.id}
-                  vehicle={vehicle}
-                />
-              ))}
-            </ScrollView>
-          ) : (
-            <View style={styles.emptyState}>
-              <View style={styles.emptyIcon}>
-                <Ionicons
-                  color={colors.primaryBrandBlue}
-                  name="car-sport-outline"
-                  size={30}
-                />
+          {homeRentals.length ? <View style={styles.activityList}>{homeRentals.map((rental) => <Pressable key={rental.id} accessibilityRole="button" accessibilityLabel={`View ${rental.vehicle.brand} ${rental.vehicle.model} rental details`} onPress={() => onOpenRental?.(rental)} style={({ pressed }) => [styles.activityCard, pressed && styles.controlPressed]}>
+            <Image source={rental.vehicle.image} resizeMode="contain" style={styles.activityImage} />
+            <View style={styles.activityInfo}>
+              <View style={styles.activityTopDetails}>
+                <Text numberOfLines={1} style={styles.activityName}>{rental.vehicle.brand} {rental.vehicle.model}</Text>
+                <Text style={styles.activityDate}>{rental.startDate} – {rental.endDate}</Text>
               </View>
-              <Text style={styles.emptyTitle}>No cars found</Text>
-              <Text style={styles.emptyDescription}>
-                Try another search or clear your filters.
-              </Text>
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => {
-                  setActiveCategory('All Cars');
-                  setIsAvailableOnly(false);
-                  setSearchQuery('');
-                }}
-              >
-                <Text style={styles.clearFiltersText}>Clear filters</Text>
-              </Pressable>
+              <Text style={[styles.activityStatus, rental.status === 'canceled' && styles.activityCanceled]}>{rental.status === 'confirmed' ? 'Upcoming rental' : `${rental.status.charAt(0).toUpperCase()}${rental.status.slice(1)} rental`}</Text>
             </View>
-          )}
-
-          <View style={styles.recommendedHeader}>
-            <Text style={styles.recommendedTitle}>Recommended for you</Text>
-            <Pressable
-              accessibilityRole="button"
-              hitSlop={10}
-              onPress={() => onTabPress?.('discover')}
-            >
-              <Text style={styles.exploreText}>Discover more</Text>
-            </Pressable>
-          </View>
-
-          <View style={styles.recommendedList}>
-            {MOCK_RECOMMENDED_VEHICLES.map((vehicle) => (
-              <VehicleCard
-                key={vehicle.id}
-                favorite={favoriteIds.has(vehicle.id)}
-                onPress={() => onOpenVehicle?.(vehicle, center)}
-                onToggleFavorite={() => toggleFavorite(vehicle.id)}
-                variant="recommended"
-                vehicle={vehicle}
-              />
-            ))}
-          </View>
+            <View style={styles.activityAction}><AppIcon name="chevronRight" color={colors.primaryBrandBlue} size={16} /></View>
+          </Pressable>)}</View> : <View style={styles.activityEmpty}><Text style={styles.emptyDescription}>Your rentals and services will appear here.</Text></View>}
+          </ScrollView>
         </View>
-      </ScrollView>
+      </View>
 
       <HomeBottomNavigation
         onTabPress={onTabPress}
@@ -479,11 +367,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.white,
   },
-  scrollContent: {
+  contentFrame: {
+    flex: 1,
     backgroundColor: colors.primaryDark,
   },
   header: {
-    minHeight: 232,
+    minHeight: 205,
     backgroundColor: colors.primaryDark,
     paddingHorizontal: layout.screenGutter,
     paddingTop: 28,
@@ -500,7 +389,7 @@ const styles = StyleSheet.create({
   locationCaption: {
     color: colors.borderGray,
     fontFamily: fonts.regular,
-    fontSize: 13,
+    fontSize: 14,
   },
   locationRow: {
     flexDirection: 'row',
@@ -570,14 +459,16 @@ const styles = StyleSheet.create({
     marginTop: 29,
   },
   sheet: {
-    minHeight: 900,
+    flex: 1,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     backgroundColor: colors.white,
     paddingHorizontal: layout.screenGutter,
     paddingTop: 34,
-    paddingBottom: 140,
+    paddingBottom: 0,
   },
+  bodyScroller: { flex: 1, marginHorizontal: -layout.screenGutter, marginTop: 10 },
+  bodyContent: { paddingHorizontal: layout.screenGutter, paddingBottom: 140 },
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -632,8 +523,42 @@ const styles = StyleSheet.create({
     fontFamily: fonts.semiBold,
     fontSize: 17,
     fontWeight: '600',
-    marginTop: 24,
+    marginTop: 0,
   },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 28, marginBottom: 16 },
+  brandList: { gap: 16, paddingBottom: 4 },
+  brandItem: { width: 70, alignItems: 'center' },
+  brandCircle: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#F4F6F9', borderWidth: 2, borderColor: 'transparent', alignItems: 'center', justifyContent: 'center' },
+  brandCircleActive: { borderColor: colors.primaryBrandBlue, backgroundColor: '#EDF4FE' },
+  brandImage: { width: 42, height: 42 },
+  brandName: { color: colors.textPrimary, fontFamily: fonts.medium, fontSize: 13, marginTop: 7 },
+  serviceList: { gap: 16, paddingBottom: 8 },
+  serviceItem: { width: 96, alignItems: 'center' },
+  serviceCircle: { width: 68, height: 68, borderRadius: 34, backgroundColor: '#F4F6F9', alignItems: 'center', justifyContent: 'center' },
+  serviceImage: { width: 45, height: 45 },
+  serviceName: { color: colors.textPrimary, fontFamily: fonts.medium, fontSize: 13, marginTop: 8, textAlign: 'center' },
+  activityList: { gap: 14, paddingVertical: 4 },
+  activityCard: { minHeight: 112, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: colors.borderGray, borderRadius: 16, backgroundColor: colors.white, paddingHorizontal: 10, shadowColor: colors.primaryDark, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 },
+  activityImage: { width: 100, height: 80, marginRight: 10 },
+  activityInfo: { flex: 1, justifyContent: 'space-between', alignSelf: 'stretch', paddingVertical: 19 },
+  activityTopDetails: { gap: 7 },
+  activityName: { color: colors.textPrimary, fontFamily: fonts.semiBold, fontSize: 14 },
+  activityDate: { color: colors.textSecondary, fontFamily: fonts.regular, fontSize: 12 },
+  activityStatus: { alignSelf: 'flex-start', color: colors.primaryBrandBlue, fontFamily: fonts.medium, fontSize: 12 },
+  activityCanceled: { color: colors.textSecondary },
+  activityAction: { alignItems: 'center', gap: 2, marginLeft: 5 },
+  activityActionText: { color: colors.primaryBrandBlue, fontFamily: fonts.medium, fontSize: 12 },
+  activityEmpty: { minHeight: 90, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.borderGray, borderRadius: 16 },
+  carScroller: { marginHorizontal: -layout.screenGutter },
+  carList: { gap: 16, paddingTop: 14, paddingBottom: 24, paddingHorizontal: layout.screenGutter + 16 },
+  carCard: { width: 210, height: 245, borderRadius: 17, backgroundColor: colors.white, paddingTop: 16, paddingHorizontal: 14, shadowColor: '#1A2540', shadowOffset: { width: 0, height: 7 }, shadowOpacity: 0.14, shadowRadius: 13, elevation: 6 },
+  cardBrand: { color: colors.textSecondary, fontFamily: fonts.semiBold, fontSize: 14 },
+  cardModel: { color: colors.textPrimary, fontFamily: fonts.medium, fontSize: 13, marginTop: 3 },
+  carImage: { position: 'absolute', left: 5, top: 62, width: 200, height: 130 },
+  cardFooter: { marginTop: 'auto', flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
+  cardPrice: { color: colors.primaryDark, fontSize: 17, marginBottom: 12,  ...moneyText },
+  cardPerDay: { color: colors.textSecondary, fontFamily: fonts.regular, fontSize: 12 },
+  cardArrow: { width: 46, height: 49, marginRight: -14, borderTopLeftRadius: 17, borderBottomRightRadius: 17, backgroundColor: colors.primaryBrandBlue, alignItems: 'center', justifyContent: 'center' },
   featuredList: {
     paddingTop: 4,
     paddingRight: 8,
@@ -658,7 +583,7 @@ const styles = StyleSheet.create({
   exploreText: {
     color: colors.primaryBrandBlue,
     fontFamily: fonts.semiBold,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
   },
   recommendedList: {
@@ -687,13 +612,13 @@ const styles = StyleSheet.create({
   emptyDescription: {
     color: colors.textSecondary,
     fontFamily: fonts.regular,
-    fontSize: 13,
+    fontSize: 14,
     marginTop: 6,
   },
   clearFiltersText: {
     color: colors.primaryBrandBlue,
     fontFamily: fonts.semiBold,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
     marginTop: 16,
   },

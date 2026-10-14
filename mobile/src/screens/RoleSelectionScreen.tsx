@@ -1,5 +1,5 @@
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Image,
   Pressable,
@@ -27,11 +27,6 @@ const driverImage = require('../../assets/images/role-3.png');
 const renterIcon = require('../../assets/images/user.png');
 const ownerIcon = require('../../assets/images/car.png');
 const driverIcon = require('../../assets/images/driver.png');
-
-const FOOTER_HEIGHT = 70;
-const NON_CARD_CONTENT_HEIGHT = 203;
-const MIN_CARD_HEIGHT = 156;
-const MAX_CARD_HEIGHT = 172;
 
 type RoleSelectionScreenProps = {
   onContinue?: (roles: UserRole[]) => void;
@@ -68,32 +63,29 @@ const roleOptions = [
 export function RoleSelectionScreen({
   onContinue,
 }: RoleSelectionScreenProps) {
-  const { height } = useWindowDimensions();
+  const { height, width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const [selectedRoles, setSelectedRoles] = useState<Set<UserRole>>(
     () => new Set(['renter']),
   );
 
-  const usableHeight = height - insets.top - insets.bottom;
-  const availableCardHeight =
-    (usableHeight - FOOTER_HEIGHT - NON_CARD_CONTENT_HEIGHT) / 3;
-  const roleCardHeight = Math.min(
-    MAX_CARD_HEIGHT,
-    Math.max(MIN_CARD_HEIGHT, availableCardHeight),
-  );
+  const carousel = useRef<ScrollView>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const activeIndexRef = useRef(0);
+  const cardWidth = Math.min(440, width - 64);
+  const pageWidth = cardWidth + 16;
+  const roleCardHeight = Math.min(460, Math.max(390, (height - insets.top - insets.bottom) * 0.56));
+  const goToRole = (index: number) => {
+    activeIndexRef.current = index;
+    setActiveIndex(index);
+    carousel.current?.scrollTo({ x: index * pageWidth, animated: true });
+  };
+  useEffect(() => {
+    carousel.current?.scrollTo({ x: activeIndexRef.current * pageWidth, animated: false });
+  }, [pageWidth]);
 
-  const toggleRole = (role: UserRole) => {
-    setSelectedRoles((currentRoles) => {
-      const nextRoles = new Set(currentRoles);
-
-      if (nextRoles.has(role)) {
-        nextRoles.delete(role);
-      } else {
-        nextRoles.add(role);
-      }
-
-      return nextRoles;
-    });
+  const selectRole = (role: UserRole) => {
+    setSelectedRoles(new Set([role]));
   };
 
   const handleContinue = () => {
@@ -122,38 +114,73 @@ export function RoleSelectionScreen({
               <Text style={styles.heading}>-rides?</Text>
             </View>
             <Text style={styles.subtitle}>
-              choose one or more roles to personalize{`\n`}your experience
+              Choose a role to personalize your experience.
             </Text>
           </View>
 
-          <View style={styles.cards}>
+          <ScrollView
+            ref={carousel}
+            horizontal
+            style={{ flexGrow: 0 }}
+            showsHorizontalScrollIndicator={false}
+            decelerationRate="fast"
+            snapToInterval={pageWidth}
+            disableIntervalMomentum
+            directionalLockEnabled
+            contentContainerStyle={[styles.cards, { paddingHorizontal: (width - cardWidth) / 2 }]}
+            onMomentumScrollEnd={(event) => {
+              const index = Math.max(0, Math.min(roleOptions.length - 1, Math.round(event.nativeEvent.contentOffset.x / pageWidth)));
+              activeIndexRef.current = index;
+              setActiveIndex(index);
+            }}
+          >
             {roleOptions.map((role) => (
+              <View key={role.id} style={{ width: cardWidth }}>
               <RoleCard
-              description={role.description}
-              height={roleCardHeight}
+                expanded
+                description={role.description}
+                height={roleCardHeight}
                 icon={role.icon}
                 image={role.image}
                 imagePosition={role.imagePosition}
                 key={role.id}
-                onPress={() => toggleRole(role.id)}
+                onPress={() => selectRole(role.id)}
                 selected={selectedRoles.has(role.id)}
                 title={role.title}
               />
+              </View>
+            ))}
+          </ScrollView>
+          <View style={styles.pagination}>
+            {roleOptions.map((role, index) => (
+              <Pressable
+                key={role.id}
+                accessibilityRole="button"
+                accessibilityLabel={`Show ${role.title}, ${index + 1} of 3`}
+                accessibilityState={{ selected: activeIndex === index }}
+                onPress={() => goToRole(index)}
+                style={styles.dotTarget}
+              >
+                <View style={[styles.dot, activeIndex === index && styles.activeDot]} />
+              </Pressable>
             ))}
           </View>
+          <Text style={styles.pageLabel}>{activeIndex + 1} of 3 · Swipe to explore roles</Text>
 
           <View style={styles.note}>
             <View style={styles.noteIcon}>
               <Text style={styles.noteIconText}>!</Text>
             </View>
             <Text style={styles.noteText}>
-              You can select multiple roles and switch between them in your
-              profile
+              Choose one role to get started. You can switch roles later from your profile.
             </Text>
           </View>
         </ScrollView>
 
         <View style={styles.footer}>
+          <Text style={styles.selectionSummary}>
+            {selectedRoles.size ? roleOptions.filter(role => selectedRoles.has(role.id)).map(role => role.title).join(' · ') : 'Select at least one role to continue'}
+          </Text>
           <Pressable
             accessibilityRole="button"
             accessibilityState={{ disabled: isContinueDisabled }}
@@ -188,19 +215,19 @@ const styles = StyleSheet.create({
   },
   content: {
     flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingTop: 8,
-    paddingBottom: 12,
+    paddingTop: 16,
+    paddingBottom: 20,
   },
   headingContainer: {
     alignItems: 'center',
+    paddingHorizontal: 28,
   },
   heading: {
     color: colors.textPrimary,
     fontFamily: fonts.bold,
     fontSize: 23,
     fontWeight: '700',
-    lineHeight: 26,
+    lineHeight: 30,
     textAlign: 'center',
   },
   brandHeading: {
@@ -218,19 +245,29 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontFamily: fonts.regular,
     fontSize: 15,
-    lineHeight: 19,
-    marginTop: 8,
+    lineHeight: 22,
+    marginTop: 12,
+    maxWidth: 290,
     textAlign: 'center',
   },
   cards: {
-    gap: 12,
-    marginTop: 18,
+    gap: 16,
+    paddingTop: 26,
+    paddingBottom: 24,
   },
+  pagination: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  dotTarget: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#DCE5FA' },
+  activeDot: { width: 30, backgroundColor: colors.primaryBrandBlue },
+  pageLabel: { textAlign: 'center', fontFamily: fonts.regular, fontSize: 12, color: colors.textSecondary },
+  selectionSummary: { textAlign: 'center', fontFamily: fonts.medium, fontSize: 12, lineHeight: 18, color: colors.textSecondary, marginBottom: 10 },
   note: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginTop: 28,
-    paddingHorizontal: 8,
+    marginTop: 22,
+    paddingHorizontal: 32,
+    maxWidth: 480,
+    alignSelf: 'center',
   },
   noteIcon: {
     width: 18,
@@ -252,8 +289,8 @@ const styles = StyleSheet.create({
     flex: 1,
     color: colors.textSecondary,
     fontFamily: fonts.regular,
-    fontSize: 11,
-    lineHeight: 14,
+    fontSize: 12,
+    lineHeight: 19,
   },
   continueButton: {
     height: 52,

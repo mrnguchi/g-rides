@@ -1,8 +1,8 @@
 import { StatusBar } from 'expo-status-bar';
 import {
   Image,
-  ImageBackground,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -11,8 +11,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors, fonts } from '../theme';
 
-const backgroundImage = require('../../assets/images/welcome-bg.jpeg');
-const brandLogo = require('../../assets/images/logo.png');
+const vehicleImage = require('../../assets/images/cars/toyota/4runner/toyota 4runner.png');
+const brandLogo = require('../../assets/images/splash-icon.png');
 
 type WelcomeScreenProps = {
   onLogin?: () => void;
@@ -21,15 +21,15 @@ type WelcomeScreenProps = {
 
 export function WelcomeScreen({ onLogin, onSignUp }: WelcomeScreenProps) {
   return (
-    <ImageBackground
-      resizeMode="cover"
-      source={backgroundImage}
-      style={styles.background}
-    >
       <SafeAreaView edges={['top', 'bottom']} style={styles.overlay}>
-        <StatusBar hidden />
+        <StatusBar style="dark" />
 
         <View style={styles.content}>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.introduction}>
+          <View style={styles.vehicleCard}>
+            <View style={styles.vehicleStage}>
+              <Image source={vehicleImage} resizeMode="contain" accessibilityLabel="Toyota 4Runner" style={styles.vehicleImage} />
+            </View>
           <View style={styles.brand}>
             <Image
               accessibilityLabel="G-Rides logo"
@@ -39,6 +39,7 @@ export function WelcomeScreen({ onLogin, onSignUp }: WelcomeScreenProps) {
             />
             <Text style={styles.brandName}>- rides</Text>
           </View>
+          </View>
 
           <View style={styles.copy}>
             <Text style={styles.title}>Welcome</Text>
@@ -46,6 +47,7 @@ export function WelcomeScreen({ onLogin, onSignUp }: WelcomeScreenProps) {
               Find trusted cars nearby and rent{`\n`}with ease.
             </Text>
           </View>
+          </ScrollView>
 
           <View style={styles.actions}>
             <Pressable
@@ -74,66 +76,86 @@ export function WelcomeScreen({ onLogin, onSignUp }: WelcomeScreenProps) {
           </View>
         </View>
       </SafeAreaView>
-    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  background: {
-    flex: 1,
-    backgroundColor: colors.primaryDark,
-  },
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.82)',
+    backgroundColor: colors.white,
   },
   content: {
     flex: 1,
     paddingHorizontal: 24,
   },
+  introduction: {
+    flexGrow: 1,
+    paddingTop: 24,
+    paddingBottom: 24,
+  },
+  vehicleCard: {
+    backgroundColor: '#F3F4F6',
+    borderRadius: 28,
+    padding: 18,
+    width: '100%',
+    maxWidth: 480,
+    alignSelf: 'center',
+    shadowColor: colors.primaryDark,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.09,
+    shadowRadius: 18,
+    elevation: 4,
+  },
+  vehicleStage: {
+    width: '100%',
+    aspectRatio: 1.55,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  vehicleImage: { width: '100%', height: '100%' },
   brand: {
-    height: 126,
+    height: 74,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 52,
+    marginTop: 8,
   },
   logo: {
-    width: 150,
-    height: 126,
-    marginRight: -31,
+    width: 98,
+    height: 74,
+    marginRight: -20,
   },
   brandName: {
-    color: colors.white,
+    color: colors.primaryDark,
     fontFamily: fonts.semiBold,
-    fontSize: 34,
+    fontSize: 29,
     fontWeight: '600',
     letterSpacing: 0.2,
   },
   copy: {
-    position: 'absolute',
-    top: '46%',
-    right: 24,
-    left: 24,
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingTop: 32,
+    paddingBottom: 16,
     alignItems: 'center',
   },
   title: {
-    color: colors.white,
+    color: colors.textPrimary,
     fontFamily: fonts.bold,
-    fontSize: 34,
+    fontSize: 28,
     fontWeight: '700',
     textAlign: 'center',
   },
   description: {
-    color: colors.backgroundLight,
+    color: colors.textSecondary,
     fontFamily: fonts.regular,
     fontSize: 16,
-    lineHeight: 21,
-    marginTop: 14,
+    lineHeight: 24,
+    marginTop: 12,
     textAlign: 'center',
   },
   actions: {
-    marginTop: 'auto',
+    paddingTop: 12,
     paddingBottom: 8,
   },
   button: {
@@ -144,23 +166,23 @@ const styles = StyleSheet.create({
   },
   loginButton: {
     borderWidth: 1,
-    borderColor: colors.white,
-    backgroundColor: 'transparent',
+    borderColor: colors.primaryBrandBlue,
+    backgroundColor: colors.white,
   },
   signUpButton: {
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.primaryBrandBlue,
     marginTop: 14,
   },
   loginText: {
-    color: colors.white,
+    color: colors.primaryBrandBlue,
     fontFamily: fonts.semiBold,
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: '600',
   },
   signUpText: {
-    color: colors.textPrimary,
+    color: colors.white,
     fontFamily: fonts.semiBold,
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: '600',
   },
   buttonPressed: {

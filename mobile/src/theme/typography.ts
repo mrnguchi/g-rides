@@ -3,6 +3,8 @@ import { Platform } from 'react-native';
 const androidFontFamily = 'Roboto';
 
 export const fonts = {
+  money: 'Roboto_600SemiBold',
+  moneyExtraBold: 'Roboto_800ExtraBold',
   regular: Platform.select({
     ios: 'Inter_400Regular',
     android: androidFontFamily,
@@ -20,3 +22,9 @@ export const fonts = {
     android: androidFontFamily,
   }),
 } as const;
+
+// Use the bundled face directly, without a synthetic platform weight.
+export const moneyText = { fontFamily: fonts.money, fontWeight: 'normal' as const };
+
+// Process states use regular weight on both iOS and Android.
+export const statusText = { fontFamily: fonts.regular, fontWeight: '400' as const };

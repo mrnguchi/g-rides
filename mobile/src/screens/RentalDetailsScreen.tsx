@@ -19,7 +19,7 @@ import {
   type PaymentMethod,
 } from '../components';
 import { useScreenBackNavigation } from '../hooks/useScreenBackNavigation';
-import { colors, fonts, layout } from '../theme';
+import { colors, fonts, layout, moneyText } from '../theme';
 import type { RentalRecord, RentalStatus } from '../types/rental';
 
 type RentalDetailsScreenProps = {
@@ -42,7 +42,6 @@ type StatusPresentation = {
   title: string;
 };
 
-const calendarIcon = require('../../assets/images/calendar (1).png');
 const carIcon = require('../../assets/images/car (1).png');
 const canceledIcon = require('../../assets/images/forbidden.png');
 const completedIcon = require('../../assets/images/check-mark.png');
@@ -111,7 +110,7 @@ function DetailCell({ helper, icon, label, value }: DetailCellProps) {
       </View>
       <View style={styles.detailCellCopy}>
         <Text style={styles.detailLabel}>{label}</Text>
-        <Text numberOfLines={2} style={styles.detailValue}>
+        <Text style={styles.detailValue}>
           {value}
         </Text>
         {helper && <Text style={styles.detailHelper}>{helper}</Text>}
@@ -142,6 +141,7 @@ function PaymentRow({
         style={[
           styles.paymentValue,
           emphasized && styles.totalPaymentValue,
+          !value.includes('XAF') && { fontFamily: fonts.medium },
           valueColor ? { color: valueColor } : undefined,
         ]}
       >
@@ -168,6 +168,17 @@ export function RentalDetailsScreen({
   const [isPaymentSheetVisible, setIsPaymentSheetVisible] = useState(false);
   const [rating, setRating] = useState(0);
   const presentation = statusPresentation[rental.status];
+  const nextStep = rental.status === 'active'
+    ? {
+        title: 'Review your return details',
+        description: `Return by ${rental.endDate}, ${rental.endTime}. Confirm arrangements with the owner.`,
+      }
+    : rental.status === 'confirmed'
+      ? {
+          title: 'Prepare for pickup',
+          description: 'Review the payment summary and complete payment before collecting your car.',
+        }
+      : undefined;
   const amountDue = rental.totalPaidXaf + rental.depositXaf;
 
   const paymentRows = useMemo(() => {
@@ -249,7 +260,7 @@ export function RentalDetailsScreen({
 
   return (
     <View style={styles.screen} {...backGestureHandlers}>
-      <StatusBar backgroundColor={colors.white} style="dark" />
+      <StatusBar style="dark" />
 
       <SafeAreaView edges={['top']} style={styles.headerSafeArea}>
         <View style={styles.header}>
@@ -263,13 +274,17 @@ export function RentalDetailsScreen({
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.vehicleCard}>
+        <View style={styles.hero}>
           <Image
-            resizeMode="cover"
+            resizeMode="contain"
             source={rental.vehicle.image}
             style={styles.vehicleImage}
           />
+        </View>
+        <View style={styles.detailsSheet}>
           <View style={styles.vehicleCopy}>
+            <View style={styles.identityRow}>
+              <Text style={styles.vehicleName}>{rental.vehicle.brand} {rental.vehicle.model}</Text>
             <View
               style={[
                 styles.statusBadge,
@@ -283,33 +298,30 @@ export function RentalDetailsScreen({
                 {presentation.label}
               </Text>
             </View>
-            <Text style={styles.vehicleBrand}>{rental.vehicle.brand}</Text>
-            <Text numberOfLines={2} style={styles.vehicleName}>
-              {rental.vehicle.model}
-            </Text>
+            </View>
             <Text style={styles.reference}>Booking #{rental.bookingReference}</Text>
           </View>
-        </View>
 
         <View
           style={[
             styles.statusCard,
-            { backgroundColor: presentation.background },
+            { backgroundColor: nextStep ? colors.primaryBrandBlue : presentation.background },
           ]}
         >
           <View style={styles.statusIconContainer}>
             <Image
               resizeMode="contain"
               source={presentation.icon}
-              style={[styles.statusIcon, { tintColor: presentation.color }]}
+              style={[styles.statusIcon, { tintColor: nextStep ? colors.primaryBrandBlue : presentation.color }]}
             />
           </View>
           <View style={styles.statusCopy}>
-            <Text style={[styles.statusTitle, { color: presentation.color }]}>
-              {presentation.title}
+            {nextStep && <Text style={styles.nextStepLabel}>Next step</Text>}
+            <Text style={[styles.statusTitle, { color: nextStep ? colors.white : presentation.color }]}>
+              {nextStep?.title ?? presentation.title}
             </Text>
-            <Text style={styles.statusDescription}>
-              {presentation.description}
+            <Text style={[styles.statusDescription, nextStep && styles.nextStepDescription]}>
+              {nextStep?.description ?? presentation.description}
             </Text>
           </View>
         </View>
@@ -345,19 +357,20 @@ export function RentalDetailsScreen({
         )}
 
         <Text style={styles.sectionTitle}>Booking information</Text>
+        <View style={styles.dateRow}>
+          <View style={styles.dateColumn}>
+            <Text style={styles.detailLabel}>Pickup</Text>
+            <Text style={styles.dateValue}>{rental.pickupDate}</Text>
+            <Text style={styles.detailHelper}>{rental.pickupTime}</Text>
+          </View>
+          <View style={styles.dateDivider} />
+          <View style={styles.dateColumn}>
+            <Text style={styles.detailLabel}>Return</Text>
+            <Text style={styles.dateValue}>{rental.endDate}</Text>
+            <Text style={styles.detailHelper}>{rental.endTime}</Text>
+          </View>
+        </View>
         <View style={styles.detailsGrid}>
-          <DetailCell
-            helper={rental.pickupTime}
-            icon={calendarIcon}
-            label="Pickup date"
-            value={rental.pickupDate}
-          />
-          <DetailCell
-            helper={rental.endTime}
-            icon={calendarIcon}
-            label="Return date"
-            value={rental.endDate}
-          />
           <DetailCell
             icon={durationIcon}
             label="Duration"
@@ -497,6 +510,7 @@ export function RentalDetailsScreen({
             size={19}
           />
         </Pressable>
+        </View>
       </ScrollView>
 
       {notice && (
@@ -527,7 +541,7 @@ export function RentalDetailsScreen({
               pressed && styles.pressed,
             ]}
           >
-            <Text numberOfLines={1} style={styles.primaryButtonText}>
+            <Text style={styles.primaryButtonText}>
               {presentation.actionLabel}
             </Text>
             <Ionicons color={colors.white} name="arrow-forward" size={19} />
@@ -547,13 +561,20 @@ export function RentalDetailsScreen({
 }
 
 const styles = StyleSheet.create({
+  hero: { paddingHorizontal: layout.screenGutter, paddingTop: 8, paddingBottom: 22 },
+  detailsSheet: { flexGrow: 1, backgroundColor: colors.white, borderTopLeftRadius: 32, borderTopRightRadius: 32, paddingHorizontal: layout.screenGutter, paddingTop: 26, paddingBottom: 32 },
+  identityRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  dateRow: { flexDirection: 'row', backgroundColor: colors.backgroundLight, borderRadius: 18, padding: 18, gap: 16 },
+  dateColumn: { flex: 1, minWidth: 0 },
+  dateDivider: { width: 1, backgroundColor: colors.borderGray },
+  dateValue: { fontFamily: fonts.semiBold, color: colors.textPrimary, fontSize: 15, lineHeight: 22, marginTop: 8 },
+  nextStepLabel: { fontFamily: fonts.medium, fontSize: 13, color: colors.white, marginBottom: 7 },
+  nextStepDescription: { color: colors.white, fontSize: 14, lineHeight: 22 },
   screen: {
     flex: 1,
     backgroundColor: colors.backgroundLight,
   },
-  headerSafeArea: {
-    backgroundColor: colors.white,
-  },
+  headerSafeArea: { backgroundColor: colors.backgroundLight, },
   header: {
     height: 62,
     flexDirection: 'row',
@@ -571,45 +592,10 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
   },
-  content: {
-    paddingHorizontal: layout.screenGutter,
-    paddingTop: 16,
-    paddingBottom: 142,
-  },
-  vehicleCard: {
-    minHeight: 130,
-    flexDirection: 'row',
-    gap: 14,
-    borderRadius: 16,
-    backgroundColor: colors.white,
-    padding: 9,
-    shadowColor: colors.primaryDark,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.09,
-    shadowRadius: 10,
-    elevation: 4,
-  },
-  vehicleImage: {
-    width: 142,
-    height: 112,
-    borderRadius: 11,
-    backgroundColor: colors.surfaceGray,
-  },
-  vehicleCopy: {
-    minWidth: 0,
-    flex: 1,
-    paddingTop: 3,
-    paddingRight: 5,
-  },
-  statusBadge: {
-    height: 23,
-    alignSelf: 'flex-start',
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    gap: 6,
-  },
+  content: { flexGrow: 1, },
+  vehicleImage: { width: '100%', height: 215, },
+  vehicleCopy: { gap: 9, marginBottom: 6, },
+  statusBadge: { minHeight: 28, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', borderRadius: 14, paddingHorizontal: 10, paddingVertical: 5, gap: 6, },
   statusDot: {
     width: 7,
     height: 7,
@@ -617,38 +603,12 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontFamily: fonts.medium,
-    fontSize: 9.5,
+    fontSize: 12,
     fontWeight: '500',
   },
-  vehicleBrand: {
-    color: colors.primaryBrandBlue,
-    fontFamily: fonts.medium,
-    fontSize: 11,
-    fontWeight: '500',
-    marginTop: 9,
-  },
-  vehicleName: {
-    color: colors.textPrimary,
-    fontFamily: fonts.semiBold,
-    fontSize: 15,
-    fontWeight: '600',
-    lineHeight: 19,
-    marginTop: 2,
-  },
-  reference: {
-    color: colors.textSecondary,
-    fontFamily: fonts.regular,
-    fontSize: 9.5,
-    marginTop: 'auto',
-  },
-  statusCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    borderRadius: 14,
-    padding: 14,
-    marginTop: 16,
-  },
+  vehicleName: { flex: 1, color: colors.textPrimary, fontFamily: fonts.semiBold, fontSize: 22, lineHeight: 29, },
+  reference: { color: colors.textSecondary, fontFamily: fonts.regular, fontSize: 12, },
+  statusCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, borderRadius: 18, padding: 16, marginTop: 18, },
   statusIconContainer: {
     width: 42,
     height: 42,
@@ -667,36 +627,27 @@ const styles = StyleSheet.create({
   },
   statusTitle: {
     fontFamily: fonts.semiBold,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
   },
   statusDescription: {
     color: colors.textSecondary,
     fontFamily: fonts.regular,
-    fontSize: 11,
-    lineHeight: 17,
+    fontSize: 13,
+    lineHeight: 19,
     marginTop: 4,
   },
-  ratingCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 10,
-    borderRadius: 14,
-    backgroundColor: colors.white,
-    padding: 14,
-    marginTop: 16,
-  },
+  ratingCard: { alignItems: 'flex-start', gap: 16, borderRadius: 18, backgroundColor: colors.backgroundLight, padding: 16, marginTop: 20, },
   ratingTitle: {
     color: colors.textPrimary,
     fontFamily: fonts.semiBold,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
   },
   ratingSubtitle: {
     color: colors.textSecondary,
     fontFamily: fonts.regular,
-    fontSize: 9,
+    fontSize: 12,
     marginTop: 3,
   },
   stars: {
@@ -711,27 +662,8 @@ const styles = StyleSheet.create({
     marginTop: 27,
     marginBottom: 13,
   },
-  detailsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    borderRadius: 15,
-    backgroundColor: colors.white,
-    padding: 6,
-    shadowColor: colors.primaryDark,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.07,
-    shadowRadius: 9,
-    elevation: 3,
-  },
-  detailCell: {
-    width: '50%',
-    minHeight: 89,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 9,
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-  },
+  detailsGrid: { marginTop: 8, },
+  detailCell: { minHeight: 62, flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderGray, },
   detailIconContainer: {
     width: 36,
     height: 36,
@@ -745,43 +677,11 @@ const styles = StyleSheet.create({
     height: 21,
     tintColor: colors.primaryBrandBlue,
   },
-  detailCellCopy: {
-    minWidth: 0,
-    flex: 1,
-  },
-  detailLabel: {
-    color: colors.textSecondary,
-    fontFamily: fonts.regular,
-    fontSize: 9.5,
-  },
-  detailValue: {
-    color: colors.textPrimary,
-    fontFamily: fonts.semiBold,
-    fontSize: 11.5,
-    fontWeight: '600',
-    lineHeight: 15,
-    marginTop: 3,
-  },
-  detailHelper: {
-    color: colors.textSecondary,
-    fontFamily: fonts.regular,
-    fontSize: 8.5,
-    marginTop: 3,
-  },
-  locationCard: {
-    minHeight: 96,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 11,
-    borderRadius: 15,
-    backgroundColor: colors.white,
-    padding: 13,
-    shadowColor: colors.primaryDark,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.07,
-    shadowRadius: 9,
-    elevation: 3,
-  },
+  detailCellCopy: { minWidth: 0, flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, },
+  detailLabel: { color: colors.textSecondary, fontFamily: fonts.regular, fontSize: 13, flexShrink: 1, },
+  detailValue: { color: colors.textPrimary, fontFamily: fonts.medium, fontSize: 14, lineHeight: 21, flexShrink: 1, textAlign: 'right', },
+  detailHelper: { color: colors.textSecondary, fontFamily: fonts.regular, fontSize: 13, marginTop: 5, },
+  locationCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingVertical: 8, },
   locationIconContainer: {
     width: 44,
     height: 44,
@@ -797,20 +697,20 @@ const styles = StyleSheet.create({
   locationLabel: {
     color: colors.textSecondary,
     fontFamily: fonts.regular,
-    fontSize: 9.5,
+    fontSize: 12,
   },
   locationValue: {
     color: colors.textPrimary,
     fontFamily: fonts.semiBold,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
     marginTop: 3,
   },
   locationHelper: {
     color: colors.textSecondary,
     fontFamily: fonts.regular,
-    fontSize: 9,
-    lineHeight: 13,
+    fontSize: 12,
+    lineHeight: 15,
     marginTop: 5,
   },
   locationAction: {
@@ -821,22 +721,8 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     backgroundColor: '#EDF4FE',
   },
-  paymentCard: {
-    borderRadius: 15,
-    backgroundColor: colors.white,
-    padding: 14,
-    shadowColor: colors.primaryDark,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.07,
-    shadowRadius: 9,
-    elevation: 3,
-  },
-  paymentHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingBottom: 13,
-  },
+  paymentCard: { paddingVertical: 2, },
+  paymentHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingBottom: 16, },
   walletIconContainer: {
     width: 38,
     height: 38,
@@ -853,30 +739,23 @@ const styles = StyleSheet.create({
   paymentHeaderTitle: {
     color: colors.textPrimary,
     fontFamily: fonts.semiBold,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
   },
   paymentHeaderSubtitle: {
     color: colors.textSecondary,
     fontFamily: fonts.regular,
-    fontSize: 9,
+    fontSize: 12,
     marginTop: 2,
   },
-  paymentRow: {
-    minHeight: 39,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderTopWidth: 1,
-    borderTopColor: '#EEF1F5',
-  },
+  paymentRow: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16, paddingVertical: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGray, },
   totalPaymentRow: {
     minHeight: 47,
   },
   paymentLabel: {
     color: colors.textSecondary,
     fontFamily: fonts.regular,
-    fontSize: 11,
+    fontSize: 13,
   },
   totalPaymentLabel: {
     color: colors.textPrimary,
@@ -885,30 +764,13 @@ const styles = StyleSheet.create({
   },
   paymentValue: {
     color: colors.textPrimary,
-    fontFamily: fonts.medium,
-    fontSize: 11.5,
-    fontWeight: '500',
-  },
+    fontSize: 12.5,
+     ...moneyText },
   totalPaymentValue: {
     color: colors.primaryBrandBlue,
-    fontFamily: fonts.bold,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  ownerCard: {
-    minHeight: 78,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    borderRadius: 15,
-    backgroundColor: colors.white,
-    padding: 12,
-    shadowColor: colors.primaryDark,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.07,
-    shadowRadius: 9,
-    elevation: 3,
-  },
+    fontSize: 15,
+     ...moneyText },
+  ownerCard: { minHeight: 78, flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, },
   ownerImage: {
     width: 50,
     height: 50,
@@ -921,7 +783,7 @@ const styles = StyleSheet.create({
   ownerName: {
     color: colors.textPrimary,
     fontFamily: fonts.semiBold,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
   },
   ownerRating: {
@@ -933,7 +795,7 @@ const styles = StyleSheet.create({
   ownerRatingText: {
     color: colors.textSecondary,
     fontFamily: fonts.regular,
-    fontSize: 9.5,
+    fontSize: 12,
   },
   ownerAction: {
     width: 38,
@@ -943,21 +805,7 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     backgroundColor: '#EDF4FE',
   },
-  supportCard: {
-    minHeight: 70,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    borderRadius: 15,
-    backgroundColor: colors.white,
-    padding: 12,
-    marginTop: 20,
-    shadowColor: colors.primaryDark,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.07,
-    shadowRadius: 9,
-    elevation: 3,
-  },
+  supportCard: { minHeight: 76, flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 18, backgroundColor: colors.backgroundLight, padding: 14, marginTop: 28, },
   supportIcon: {
     width: 40,
     height: 40,
@@ -977,13 +825,13 @@ const styles = StyleSheet.create({
   supportTitle: {
     color: colors.textPrimary,
     fontFamily: fonts.semiBold,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
   },
   supportText: {
     color: colors.primaryBrandBlue,
     fontFamily: fonts.medium,
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '500',
     marginTop: 3,
   },
@@ -1011,21 +859,10 @@ const styles = StyleSheet.create({
     flex: 1,
     color: colors.white,
     fontFamily: fonts.regular,
-    fontSize: 10.5,
-    lineHeight: 15,
+    fontSize: 12.5,
+    lineHeight: 17,
   },
-  footerSafeArea: {
-    position: 'absolute',
-    right: 0,
-    bottom: 0,
-    left: 0,
-    backgroundColor: colors.white,
-    shadowColor: colors.primaryDark,
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.09,
-    shadowRadius: 10,
-    elevation: 12,
-  },
+  footerSafeArea: { backgroundColor: colors.white, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGray, },
   footer: {
     minHeight: 82,
     flexDirection: 'row',
@@ -1034,18 +871,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: layout.screenGutter,
     paddingVertical: 12,
   },
-  viewCarButton: {
-    height: 52,
-    flex: 0.82,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 7,
-    borderWidth: 1.5,
-    borderColor: colors.primaryBrandBlue,
-    borderRadius: 12,
-    backgroundColor: colors.white,
-  },
+  viewCarButton: { minHeight: 52, flex: 0.82, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, borderRadius: 28, backgroundColor: '#EDF4FE', paddingHorizontal: 12, paddingVertical: 12, },
   viewCarIcon: {
     width: 20,
     height: 20,
@@ -1054,26 +880,11 @@ const styles = StyleSheet.create({
   viewCarText: {
     color: colors.primaryBrandBlue,
     fontFamily: fonts.semiBold,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
   },
-  primaryButton: {
-    height: 52,
-    flex: 1.18,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    borderRadius: 12,
-    backgroundColor: colors.primaryBrandBlue,
-    paddingHorizontal: 10,
-  },
-  primaryButtonText: {
-    color: colors.white,
-    fontFamily: fonts.semiBold,
-    fontSize: 12,
-    fontWeight: '600',
-  },
+  primaryButton: { minHeight: 52, flex: 1.18, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 28, backgroundColor: colors.primaryBrandBlue, paddingHorizontal: 16, paddingVertical: 12, },
+  primaryButtonText: { color: colors.white, fontFamily: fonts.semiBold, fontSize: 14, flexShrink: 1, textAlign: 'center', },
   pressed: {
     opacity: 0.72,
     transform: [{ scale: 0.99 }],

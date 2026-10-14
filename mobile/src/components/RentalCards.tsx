@@ -7,7 +7,7 @@ import {
   View,
 } from 'react-native';
 
-import { colors, fonts } from '../theme';
+import { colors, fonts, moneyText } from '../theme';
 import type { RentalRecord, RentalStatus } from '../types/rental';
 import { LocationIcon } from './LocationIcon';
 
@@ -72,7 +72,7 @@ function RentalMetaItem({ icon, label, value }: RentalMetaItemProps) {
         <Text numberOfLines={2} style={styles.metaLabel}>
           {label}
         </Text>
-        <Text numberOfLines={2} style={styles.metaValue}>
+        <Text numberOfLines={2} style={[styles.metaValue, value.includes('XAF') && moneyText]}>
           {value}
         </Text>
       </View>
@@ -92,7 +92,7 @@ function RentalDetailItem({ helper, icon, label, value }: RentalDetailItemProps)
         <Text numberOfLines={1} style={styles.detailLabel}>
           {label}
         </Text>
-        <Text numberOfLines={1} style={styles.detailValue}>
+        <Text numberOfLines={1} style={[styles.detailValue, value.includes('XAF') && moneyText]}>
           {value}
         </Text>
         {helper && (
@@ -422,7 +422,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     borderRadius: 10,
-    backgroundColor: '#EDF3FA',
+    backgroundColor: '#EDF4FE',
     paddingHorizontal: 14,
     paddingVertical: 10,
     marginTop: 13,
@@ -653,10 +653,8 @@ const styles = StyleSheet.create({
   },
   summaryPrice: {
     color: colors.primaryBrandBlue,
-    fontFamily: fonts.semiBold,
     fontSize: 12.5,
-    fontWeight: '600',
-  },
+     ...moneyText },
   summaryPerDay: {
     color: colors.textSecondary,
     fontFamily: fonts.regular,

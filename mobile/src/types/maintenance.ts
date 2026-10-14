@@ -1,4 +1,5 @@
 import type { ServiceProvider } from './provider';
+import type { ImageSourcePropType } from 'react-native';
 
 export type MaintenanceServiceType =
   | 'battery_service'
@@ -18,6 +19,9 @@ export type MaintenanceRequestStatus =
   | 'requested';
 
 export type MaintenanceProvider = ServiceProvider & {
+  flyer?: ImageSourcePropType;
+  areaLabel?: string;
+  description?: string;
   fulfillment: readonly MaintenanceFulfillment[];
   maintenanceServices: readonly MaintenanceServiceType[];
 };

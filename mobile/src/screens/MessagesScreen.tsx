@@ -1,6 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import Entypo from '@expo/vector-icons/Entypo';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   FlatList,
   Pressable,
@@ -19,6 +20,8 @@ import type { ChatConversation } from '../types/chat';
 type MessageFilter = 'all' | 'support' | 'unread';
 
 type MessagesScreenProps = {
+  subtitle?: string;
+  bottomNavigation?: ReactNode;
   conversations: ChatConversation[];
   onOpenConversation: (conversationId: string) => void;
   onTabPress?: (tab: MainTab) => void;
@@ -37,6 +40,8 @@ function lastMessageTime(conversation: ChatConversation) {
 }
 
 export function MessagesScreen({
+  subtitle = 'Chat with owners, drivers, and support',
+  bottomNavigation,
   conversations,
   onOpenConversation,
   onTabPress,
@@ -77,7 +82,7 @@ export function MessagesScreen({
 
   return (
     <View style={styles.screen}>
-      <StatusBar backgroundColor={colors.white} style="dark" />
+      <StatusBar style="dark" />
       <SafeAreaView edges={['top']} style={styles.safeArea}>
         <FlatList
           contentContainerStyle={[
@@ -109,7 +114,7 @@ export function MessagesScreen({
                 <View>
                   <Text style={styles.title}>Messages</Text>
                   <Text style={styles.subtitle}>
-                    Chat with owners, drivers, and support
+                    {subtitle}
                   </Text>
                 </View>
                 <Pressable
@@ -125,7 +130,7 @@ export function MessagesScreen({
                     pressed && styles.pressed,
                   ]}
                 >
-                  <Ionicons color={colors.white} name="create-outline" size={22} />
+                  <Entypo color={colors.white} name="new-message" size={22} />
                 </Pressable>
               </View>
 
@@ -234,11 +239,11 @@ export function MessagesScreen({
         </View>
       )}
 
-      <HomeBottomNavigation
+      {bottomNavigation ?? <HomeBottomNavigation
         activeTab="messages"
         onTabPress={onTabPress}
         unreadMessagesCount={unreadMessagesCount}
-      />
+      />}
     </View>
   );
 }
@@ -276,7 +281,7 @@ const styles = StyleSheet.create({
   subtitle: {
     color: colors.textSecondary,
     fontFamily: fonts.regular,
-    fontSize: 11,
+    fontSize: 13,
     marginTop: 4,
   },
   composeButton: {
@@ -307,11 +312,12 @@ const styles = StyleSheet.create({
     flex: 1,
     color: colors.textPrimary,
     fontFamily: fonts.regular,
-    fontSize: 14,
+    fontSize: 15,
     paddingVertical: 0,
   },
   filterRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
     marginTop: 15,
   },
@@ -333,15 +339,15 @@ const styles = StyleSheet.create({
   filterText: {
     color: colors.textSecondary,
     fontFamily: fonts.medium,
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '500',
   },
   activeFilterText: {
     color: colors.white,
   },
   filterCount: {
-    minWidth: 17,
-    height: 17,
+    minWidth: 20,
+    minHeight: 20,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 9,
@@ -354,7 +360,7 @@ const styles = StyleSheet.create({
   filterCountText: {
     color: colors.primaryBrandBlue,
     fontFamily: fonts.semiBold,
-    fontSize: 8,
+    fontSize: 10,
     fontWeight: '600',
   },
   activeFilterCountText: {
@@ -375,12 +381,12 @@ const styles = StyleSheet.create({
   },
   conversationCount: {
     minWidth: 22,
-    height: 22,
+    minHeight: 24,
     textAlign: 'center',
     textAlignVertical: 'center',
     color: colors.primaryBrandBlue,
     fontFamily: fonts.semiBold,
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '600',
     borderRadius: 11,
     backgroundColor: '#EDF4FE',
@@ -412,8 +418,8 @@ const styles = StyleSheet.create({
   emptyText: {
     color: colors.textSecondary,
     fontFamily: fonts.regular,
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: 13,
+    lineHeight: 20,
     textAlign: 'center',
     marginTop: 6,
   },
@@ -441,9 +447,9 @@ const styles = StyleSheet.create({
     flex: 1,
     color: colors.white,
     fontFamily: fonts.medium,
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '500',
-    lineHeight: 15,
+    lineHeight: 17,
   },
   pressed: {
     opacity: 0.72,

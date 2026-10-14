@@ -21,7 +21,8 @@ import {
 } from 'react-native-safe-area-context';
 
 import { useScreenBackNavigation } from '../hooks/useScreenBackNavigation';
-import { colors, fonts, layout } from '../theme';
+import { RentalDatePicker } from './RentalDatePicker';
+import { colors, fonts, layout, moneyText } from '../theme';
 import type {
   BookingDrivingOption,
   BookingFulfillment,
@@ -35,6 +36,7 @@ type ConfirmationMode = 'cancelRequest' | 'discard';
 type BookingRequestSheetProps = {
   existingRequest?: BookingRequest;
   onClose: () => void;
+  onOpenActivity?: () => void;
   onMessageOwner?: () => void;
   onRequestCanceled?: (requestId: string) => void;
   onRequestSubmitted?: (request: BookingRequest) => void;
@@ -50,10 +52,6 @@ type DateOption = {
   weekday: string;
 };
 
-const DEPOSIT_XAF = 25_000;
-const DELIVERY_FEE_XAF = 2_000;
-const CHAUFFEUR_FEE_PER_DAY_XAF = 15_000;
-const durationOptions = [1, 2, 3, 5, 7];
 const pickupTimeOptions = ['9:00 AM', '12:00 PM', '3:00 PM', '6:00 PM'];
 
 const calendarIcon = require('../../assets/images/calendar (1).png');
@@ -61,7 +59,6 @@ const deliveryIcon = require('../../assets/images/fast-delivery.png');
 const driverIcon = require('../../assets/images/driver.png');
 const ownerImage = require('../../assets/images/10007.png');
 const pickupTimeIcon = require('../../assets/images/time-management.png');
-const rentalDurationIcon = require('../../assets/images/time-left.png');
 
 function formatMoney(amount: number) {
   return `${amount.toLocaleString('en-US')} XAF`;
@@ -113,7 +110,7 @@ function SummaryRow({ emphasized = false, label, value }: SummaryRowProps) {
       <Text
         style={[styles.summaryLabel, emphasized && styles.emphasizedSummaryLabel]}
       >
-        {label}
+        {label.includes('XAF') ? <>{label.slice(0, label.indexOf('×') + 1)}<Text style={moneyText}>{label.slice(label.indexOf('×') + 1)}</Text></> : label}
       </Text>
       <Text
         style={[styles.summaryValue, emphasized && styles.emphasizedSummaryValue]}
@@ -127,6 +124,7 @@ function SummaryRow({ emphasized = false, label, value }: SummaryRowProps) {
 export function BookingRequestSheet({
   existingRequest,
   onClose,
+  onOpenActivity,
   onMessageOwner,
   onRequestCanceled,
   onRequestSubmitted,
@@ -134,6 +132,11 @@ export function BookingRequestSheet({
   visible,
 }: BookingRequestSheetProps) {
   const { height } = useWindowDimensions();
+  const DEPOSIT_XAF = vehicle.rentalTerms?.depositXaf ?? 0;
+  const DELIVERY_FEE_XAF = vehicle.rentalTerms?.deliveryFeeXaf ?? 0;
+  const CHAUFFEUR_FEE_PER_DAY_XAF = vehicle.rentalTerms?.chauffeurFeePerDayXaf ?? 0;
+  const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [validationError, setValidationError] = useState('');
   const safeAreaInsets = useSafeAreaInsets();
   const dateOptions = useMemo(buildDateOptions, []);
   const wasVisibleRef = useRef(false);
@@ -156,8 +159,7 @@ export function BookingRequestSheet({
     initialWindowMetrics?.insets.bottom ?? 0,
   );
 
-  const startDateOption =
-    dateOptions.find((option) => option.key === startDateKey) ?? dateOptions[0];
+  const startDateOption = useMemo(() => ({ date: new Date(`${startDateKey}T12:00:00`) }), [startDateKey]);
   const endDate = useMemo(() => {
     const date = new Date(startDateOption.date);
     date.setDate(date.getDate() + durationDays);
@@ -178,7 +180,7 @@ export function BookingRequestSheet({
     durationDays !== 1 ||
     drivingOption !== 'selfDrive' ||
     fulfillment !== 'pickup' ||
-    message.trim().length > 0 ||
+    message.trim().length > 0 || deliveryAddress.trim().length > 0 ||
     pickupTime !== pickupTimeOptions[0] ||
     startDateKey !== dateOptions[0].key;
   const activeRequest = localRequest ?? existingRequest;
@@ -188,6 +190,8 @@ export function BookingRequestSheet({
     setDrivingOption('selfDrive');
     setFulfillment('pickup');
     setMessage('');
+    setDeliveryAddress('');
+    setValidationError('');
     setPickupTime(pickupTimeOptions[0]);
     setStartDateKey(dateOptions[0].key);
   };
@@ -269,6 +273,7 @@ export function BookingRequestSheet({
       rentalAmountXaf,
       startDate: formatLongDate(startDateOption.date),
       status: 'pending',
+      handoverAddress: fulfillment === 'delivery' ? deliveryAddress.trim() : vehicle.rentalTerms?.pickupLocation,
       totalDueAfterApprovalXaf,
       vehicle,
     };
@@ -288,7 +293,7 @@ export function BookingRequestSheet({
   };
 
   const progressStep =
-    step === 'setup' ? 1 : step === 'review' ? 2 : step === 'sent' ? 3 : 4;
+    step === 'setup' ? 1 : step === 'review' ? 2 : 3;
   const title =
     step === 'setup'
       ? 'Plan your rental'
@@ -303,7 +308,7 @@ export function BookingRequestSheet({
       : step === 'review'
         ? 'Confirm everything before sending it to the owner.'
         : step === 'sent'
-          ? 'The owner has been notified.'
+          ? 'Follow your request in Activity.'
           : 'Waiting for the owner to respond.';
 
   const renderSetup = () => (
@@ -335,38 +340,7 @@ export function BookingRequestSheet({
         <Image source={calendarIcon} style={styles.sectionIcon} />
         <Text style={styles.sectionTitle}>Start date</Text>
       </View>
-      <ScrollView
-        contentContainerStyle={styles.dateList}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-      >
-        {dateOptions.map((option) => {
-          const selected = option.key === startDateKey;
-          return (
-            <Pressable
-              key={option.key}
-              accessibilityRole="radio"
-              accessibilityState={{ checked: selected }}
-              onPress={() => setStartDateKey(option.key)}
-              style={({ pressed }) => [
-                styles.dateCard,
-                selected && styles.selectedDateCard,
-                pressed && styles.pressed,
-              ]}
-            >
-              <Text style={[styles.dateWeekday, selected && styles.selectedDateText]}>
-                {option.weekday}
-              </Text>
-              <Text style={[styles.dateDay, selected && styles.selectedDateText]}>
-                {option.day}
-              </Text>
-              <Text style={[styles.dateMonth, selected && styles.selectedDateText]}>
-                {option.month}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
+      <RentalDatePicker start={startDateKey} end={formatDateKey(endDate)} onChange={(start, days) => { setStartDateKey(start); setDurationDays(days); }} />
 
       <View style={styles.sectionHeader}>
         <Image source={pickupTimeIcon} style={styles.sectionIcon} />
@@ -400,37 +374,6 @@ export function BookingRequestSheet({
         })}
       </View>
 
-      <View style={styles.sectionHeader}>
-        <Image source={rentalDurationIcon} style={styles.sectionIcon} />
-        <Text style={styles.sectionTitle}>Rental duration</Text>
-      </View>
-      <View style={styles.chipRow}>
-        {durationOptions.map((days) => {
-          const selected = days === durationDays;
-          return (
-            <Pressable
-              key={days}
-              accessibilityRole="radio"
-              accessibilityState={{ checked: selected }}
-              onPress={() => setDurationDays(days)}
-              style={({ pressed }) => [
-                styles.durationChip,
-                selected && styles.selectedChoiceChip,
-                pressed && styles.pressed,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.choiceChipText,
-                  selected && styles.selectedChoiceChipText,
-                ]}
-              >
-                {days} {days === 1 ? 'day' : 'days'}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
       <Text style={styles.dateRangeText}>
         Return {formatLongDate(endDate)} at {pickupTime}
       </Text>
@@ -453,7 +396,7 @@ export function BookingRequestSheet({
             id: 'chauffeur' as const,
             label: 'With driver',
           },
-        ].map((option) => {
+        ].filter((option) => option.id !== 'chauffeur' || vehicle.rentalTerms?.chauffeurFeePerDayXaf !== undefined).map((option) => {
           const selected = drivingOption === option.id;
           return (
             <Pressable
@@ -475,7 +418,7 @@ export function BookingRequestSheet({
                 />
               </View>
               <Text style={styles.optionLabel}>{option.label}</Text>
-              <Text style={styles.optionDescription}>{option.description}</Text>
+              <Text style={[styles.optionDescription, option.description.includes('XAF') && moneyText]}>{option.description}</Text>
               <View style={[styles.radio, selected && styles.selectedRadio]}>
                 {selected && <View style={styles.radioDot} />}
               </View>
@@ -502,7 +445,7 @@ export function BookingRequestSheet({
             id: 'delivery' as const,
             label: 'Delivery',
           },
-        ].map((option) => {
+        ].filter((option) => option.id !== 'delivery' || vehicle.rentalTerms?.deliveryFeeXaf !== undefined).map((option) => {
           const selected = fulfillment === option.id;
           return (
             <Pressable
@@ -524,7 +467,7 @@ export function BookingRequestSheet({
                 />
               </View>
               <Text style={styles.optionLabel}>{option.label}</Text>
-              <Text style={styles.optionDescription}>{option.description}</Text>
+              <Text style={[styles.optionDescription, option.description.includes('XAF') && moneyText]}>{option.description}</Text>
               <View style={[styles.radio, selected && styles.selectedRadio]}>
                 {selected && <View style={styles.radioDot} />}
               </View>
@@ -533,6 +476,11 @@ export function BookingRequestSheet({
         })}
       </View>
 
+      {fulfillment === 'delivery' ? <>
+        <Text style={styles.inputLabel}>Delivery address</Text>
+        <TextInput value={deliveryAddress} onChangeText={(value) => { setDeliveryAddress(value); setValidationError(''); }} placeholder="Street, neighbourhood, and city" placeholderTextColor={colors.textSecondary} style={styles.messageInput} maxLength={250} />
+      </> : <Text style={styles.dateRangeText}>Pickup: {vehicle.rentalTerms?.pickupLocation ?? 'Confirm pickup location with the owner'}</Text>}
+      {!!validationError && <Text accessibilityRole="alert" style={[styles.dateRangeText, { color: colors.error }]}>{validationError}</Text>}
       <Text style={styles.inputLabel}>Message to the owner (optional)</Text>
       <TextInput
         maxLength={300}
@@ -611,7 +559,7 @@ export function BookingRequestSheet({
           <View style={styles.reviewDetailCopy}>
             <Text style={styles.reviewDetailLabel}>Vehicle handover</Text>
             <Text style={styles.reviewDetailValue}>
-              {fulfillment === 'pickup' ? 'Pick up from owner' : 'Deliver to saved location'}
+              {fulfillment === 'pickup' ? vehicle.rentalTerms?.pickupLocation ?? 'Confirm with owner' : deliveryAddress.trim()}
             </Text>
           </View>
           <Pressable onPress={() => setStep('setup')}>
@@ -675,10 +623,8 @@ export function BookingRequestSheet({
         </View>
       </View>
       <Text style={styles.statusTitle}>Booking request sent</Text>
-      <Text style={styles.statusDescription}>
-        Munoh N. has received your request for the {vehicle.brand}{' '}
-        {vehicle.model}. You will be notified as soon as the owner responds.
-      </Text>
+<Text style={styles.statusDescription}>Your booking request is awaiting owner approval. Follow its progress in Activity. No payment is required yet.</Text>
+
 
       {activeRequest && (
         <View style={styles.referenceCard}>
@@ -694,9 +640,9 @@ export function BookingRequestSheet({
       <View style={styles.responseHint}>
         <Image source={driverIcon} style={styles.responseHintIcon} />
         <View style={styles.responseHintCopy}>
-          <Text style={styles.responseHintTitle}>Typical response: 5 minutes</Text>
+          <Text style={styles.responseHintTitle}>Continue in Activity</Text>
           <Text style={styles.responseHintText}>
-            We will send you a message when the owner accepts or declines.
+            View your request, message the owner, or cancel before approval.
           </Text>
         </View>
       </View>
@@ -751,7 +697,7 @@ export function BookingRequestSheet({
           />
           <SummaryRow
             label="Vehicle handover"
-            value={activeRequest.fulfillment === 'pickup' ? 'Pick up' : 'Delivery'}
+            value={activeRequest.handoverAddress ?? (activeRequest.fulfillment === 'pickup' ? 'Pick up' : 'Delivery')}
           />
           <SummaryRow
             emphasized
@@ -764,7 +710,7 @@ export function BookingRequestSheet({
           <Image source={ownerImage} style={styles.ownerAvatar} />
           <View style={styles.ownerWaitingCopy}>
             <Text style={styles.ownerWaitingName}>Munoh N.</Text>
-            <Text style={styles.ownerWaitingMeta}>Car owner · Usually replies in 5 min</Text>
+            <Text style={styles.ownerWaitingMeta}>Car owner</Text>
           </View>
           <Pressable
             accessibilityLabel="Message car owner"
@@ -799,7 +745,7 @@ export function BookingRequestSheet({
       return (
         <Pressable
           accessibilityRole="button"
-          onPress={() => setStep('review')}
+          onPress={() => { if (fulfillment === 'delivery' && deliveryAddress.trim().length < 8) { setValidationError('Enter a complete delivery address.'); return; } setValidationError(''); setStep('review'); }}
           style={({ pressed }) => [styles.primaryButton, pressed && styles.primaryPressed]}
         >
           <Text style={styles.primaryButtonText}>Review request</Text>
@@ -833,10 +779,10 @@ export function BookingRequestSheet({
           </Pressable>
           <Pressable
             accessibilityRole="button"
-            onPress={() => setStep('pending')}
+            onPress={() => { closeSheet(); onOpenActivity?.(); }}
             style={({ pressed }) => [styles.primaryButton, styles.flexButton, pressed && styles.primaryPressed]}
           >
-            <Text style={styles.primaryButtonText}>View request</Text>
+            <Text style={styles.primaryButtonText}>Go to Activity</Text>
             <Ionicons color={colors.white} name="arrow-forward" size={20} />
           </Pressable>
         </View>
@@ -924,8 +870,8 @@ export function BookingRequestSheet({
                 </Pressable>
               </View>
 
-              <View accessibilityLabel={`Step ${progressStep} of 4`} style={styles.progressRow}>
-                {[1, 2, 3, 4].map((progress) => (
+              {step !== 'pending' && <View accessibilityLabel={`Step ${progressStep} of 3`} style={styles.progressRow}>
+                {[1, 2, 3].map((progress) => (
                   <View
                     key={progress}
                     style={[
@@ -934,7 +880,7 @@ export function BookingRequestSheet({
                     ]}
                   />
                 ))}
-              </View>
+              </View>}
 
               <View style={styles.body}>
                 {step === 'setup'
@@ -1036,7 +982,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(15, 23, 42, 0.55)',
   },
   sheet: {
@@ -1095,7 +1041,7 @@ const styles = StyleSheet.create({
   subtitle: {
     color: colors.textSecondary,
     fontFamily: fonts.regular,
-    fontSize: 10.5,
+    fontSize: 12.5,
     marginTop: 3,
   },
   progressRow: {
@@ -1126,7 +1072,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     borderRadius: 15,
-    backgroundColor: '#F7F9FC',
+    backgroundColor: '#EDF4FE',
     padding: 8,
   },
   vehicleImage: {
@@ -1142,27 +1088,25 @@ const styles = StyleSheet.create({
   vehicleBrand: {
     color: colors.primaryBrandBlue,
     fontFamily: fonts.medium,
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '500',
   },
   vehicleModel: {
     color: colors.textPrimary,
     fontFamily: fonts.semiBold,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
     marginTop: 3,
   },
   vehiclePrice: {
     color: colors.primaryBrandBlue,
-    fontFamily: fonts.bold,
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 14,
     marginTop: 7,
-  },
+   ...moneyText },
   vehiclePriceUnit: {
     color: colors.textSecondary,
     fontFamily: fonts.regular,
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: '400',
   },
   availableBadge: {
@@ -1184,7 +1128,7 @@ const styles = StyleSheet.create({
   availableText: {
     color: colors.success,
     fontFamily: fonts.medium,
-    fontSize: 8.5,
+    fontSize: 10.5,
     fontWeight: '500',
   },
   sectionHeader: {
@@ -1202,7 +1146,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     color: colors.textPrimary,
     fontFamily: fonts.semiBold,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
   },
   dateList: {
@@ -1226,7 +1170,7 @@ const styles = StyleSheet.create({
   dateWeekday: {
     color: colors.textSecondary,
     fontFamily: fonts.medium,
-    fontSize: 9.5,
+    fontSize: 11.5,
     fontWeight: '500',
   },
   dateDay: {
@@ -1239,7 +1183,7 @@ const styles = StyleSheet.create({
   dateMonth: {
     color: colors.textSecondary,
     fontFamily: fonts.regular,
-    fontSize: 9,
+    fontSize: 11,
   },
   selectedDateText: {
     color: colors.white,
@@ -1277,7 +1221,7 @@ const styles = StyleSheet.create({
   choiceChipText: {
     color: colors.textPrimary,
     fontFamily: fonts.medium,
-    fontSize: 10.5,
+    fontSize: 12.5,
     fontWeight: '500',
   },
   selectedChoiceChipText: {
@@ -1286,7 +1230,7 @@ const styles = StyleSheet.create({
   dateRangeText: {
     color: colors.textSecondary,
     fontFamily: fonts.regular,
-    fontSize: 10.5,
+    fontSize: 12.5,
     marginTop: 9,
   },
   optionRow: {
@@ -1304,7 +1248,7 @@ const styles = StyleSheet.create({
   },
   selectedOptionCard: {
     borderColor: colors.primaryBrandBlue,
-    backgroundColor: '#F5F9FF',
+    backgroundColor: '#EDF4FE',
   },
   optionIcon: {
     width: 37,
@@ -1320,7 +1264,7 @@ const styles = StyleSheet.create({
   optionLabel: {
     color: colors.textPrimary,
     fontFamily: fonts.semiBold,
-    fontSize: 12.5,
+    fontSize: 13.5,
     fontWeight: '600',
     marginTop: 9,
   },
@@ -1328,8 +1272,8 @@ const styles = StyleSheet.create({
     maxWidth: '82%',
     color: colors.textSecondary,
     fontFamily: fonts.regular,
-    fontSize: 8.8,
-    lineHeight: 12,
+    fontSize: 10.8,
+    lineHeight: 14,
     marginTop: 3,
   },
   radio: {
@@ -1356,7 +1300,7 @@ const styles = StyleSheet.create({
   inputLabel: {
     color: colors.textPrimary,
     fontFamily: fonts.semiBold,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
     marginTop: 23,
   },
@@ -1364,8 +1308,8 @@ const styles = StyleSheet.create({
     minHeight: 92,
     color: colors.textPrimary,
     fontFamily: fonts.regular,
-    fontSize: 12,
-    lineHeight: 17,
+    fontSize: 13,
+    lineHeight: 19,
     borderWidth: 1,
     borderColor: colors.borderGray,
     borderRadius: 14,
@@ -1377,7 +1321,7 @@ const styles = StyleSheet.create({
   characterCount: {
     color: colors.textSecondary,
     fontFamily: fonts.regular,
-    fontSize: 9,
+    fontSize: 11,
     textAlign: 'right',
     marginTop: 5,
   },
@@ -1387,7 +1331,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 13,
     borderRadius: 15,
-    backgroundColor: '#F7F9FC',
+    backgroundColor: '#EDF4FE',
     padding: 9,
   },
   reviewVehicleImage: {
@@ -1416,13 +1360,13 @@ const styles = StyleSheet.create({
   reviewRating: {
     color: colors.textPrimary,
     fontFamily: fonts.medium,
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '500',
   },
   reviewAvailable: {
     color: colors.success,
     fontFamily: fonts.medium,
-    fontSize: 9.5,
+    fontSize: 11.5,
     fontWeight: '500',
     marginLeft: 7,
   },
@@ -1470,20 +1414,20 @@ const styles = StyleSheet.create({
   reviewDetailLabel: {
     color: colors.textSecondary,
     fontFamily: fonts.regular,
-    fontSize: 9.5,
+    fontSize: 11.5,
   },
   reviewDetailValue: {
     color: colors.textPrimary,
     fontFamily: fonts.semiBold,
-    fontSize: 11.5,
+    fontSize: 12.5,
     fontWeight: '600',
-    lineHeight: 16,
+    lineHeight: 18,
     marginTop: 3,
   },
   reviewDetailHelper: {
     color: colors.textSecondary,
     fontFamily: fonts.regular,
-    fontSize: 9,
+    fontSize: 11,
     marginTop: 3,
   },
   reviewDivider: {
@@ -1493,7 +1437,7 @@ const styles = StyleSheet.create({
   changeText: {
     color: colors.primaryBrandBlue,
     fontFamily: fonts.semiBold,
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '600',
   },
   messagePreview: {
@@ -1501,15 +1445,15 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: 10,
     borderRadius: 14,
-    backgroundColor: '#F5F9FF',
+    backgroundColor: '#EDF4FE',
     padding: 13,
   },
   messagePreviewText: {
     flex: 1,
     color: colors.textPrimary,
     fontFamily: fonts.regular,
-    fontSize: 11,
-    lineHeight: 16,
+    fontSize: 13,
+    lineHeight: 18,
   },
   priceCard: {
     borderRadius: 15,
@@ -1539,27 +1483,23 @@ const styles = StyleSheet.create({
     flex: 1,
     color: colors.textSecondary,
     fontFamily: fonts.regular,
-    fontSize: 10.5,
+    fontSize: 12.5,
   },
   summaryValue: {
     color: colors.textPrimary,
-    fontFamily: fonts.medium,
-    fontSize: 11,
-    fontWeight: '500',
+    fontSize: 13,
     textAlign: 'right',
-  },
+   ...moneyText },
   emphasizedSummaryLabel: {
     color: colors.textPrimary,
     fontFamily: fonts.semiBold,
-    fontSize: 11.5,
+    fontSize: 12.5,
     fontWeight: '600',
   },
   emphasizedSummaryValue: {
     color: colors.primaryBrandBlue,
-    fontFamily: fonts.bold,
-    fontSize: 14,
-    fontWeight: '700',
-  },
+    fontSize: 15,
+     ...moneyText },
   infoCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -1573,8 +1513,8 @@ const styles = StyleSheet.create({
     flex: 1,
     color: colors.textSecondary,
     fontFamily: fonts.regular,
-    fontSize: 10,
-    lineHeight: 15,
+    fontSize: 12,
+    lineHeight: 17,
   },
   statusContent: {
     alignItems: 'center',
@@ -1607,8 +1547,8 @@ const styles = StyleSheet.create({
     maxWidth: 330,
     color: colors.textSecondary,
     fontFamily: fonts.regular,
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: 13,
+    lineHeight: 20,
     textAlign: 'center',
     marginTop: 9,
   },
@@ -1616,14 +1556,14 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
     borderRadius: 16,
-    backgroundColor: '#F7F9FC',
+    backgroundColor: '#EDF4FE',
     padding: 18,
     marginTop: 26,
   },
   referenceLabel: {
     color: colors.textSecondary,
     fontFamily: fonts.semiBold,
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: '600',
     letterSpacing: 0.8,
   },
@@ -1648,7 +1588,7 @@ const styles = StyleSheet.create({
   pendingPillText: {
     color: '#A66400',
     fontFamily: fonts.medium,
-    fontSize: 9.5,
+    fontSize: 11.5,
     fontWeight: '500',
   },
   responseHint: {
@@ -1673,14 +1613,14 @@ const styles = StyleSheet.create({
   responseHintTitle: {
     color: colors.textPrimary,
     fontFamily: fonts.semiBold,
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '600',
   },
   responseHintText: {
     color: colors.textSecondary,
     fontFamily: fonts.regular,
-    fontSize: 9.5,
-    lineHeight: 14,
+    fontSize: 11.5,
+    lineHeight: 16,
     marginTop: 3,
   },
   pendingHeaderCard: {
@@ -1706,14 +1646,14 @@ const styles = StyleSheet.create({
   pendingHeaderTitle: {
     color: colors.textPrimary,
     fontFamily: fonts.semiBold,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
   },
   pendingHeaderText: {
     color: colors.textSecondary,
     fontFamily: fonts.regular,
-    fontSize: 10,
-    lineHeight: 15,
+    fontSize: 12,
+    lineHeight: 17,
     marginTop: 4,
   },
   pendingVehicleCard: {
@@ -1722,7 +1662,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     borderRadius: 15,
-    backgroundColor: '#F7F9FC',
+    backgroundColor: '#EDF4FE',
     padding: 8,
     marginTop: 14,
   },
@@ -1738,14 +1678,14 @@ const styles = StyleSheet.create({
   pendingVehicleName: {
     color: colors.textPrimary,
     fontFamily: fonts.semiBold,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
     marginTop: 3,
   },
   pendingReference: {
     color: colors.textSecondary,
     fontFamily: fonts.regular,
-    fontSize: 9.5,
+    fontSize: 11.5,
     marginTop: 8,
   },
   requestSummaryCard: {
@@ -1764,7 +1704,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     borderRadius: 15,
-    backgroundColor: '#F7F9FC',
+    backgroundColor: '#EDF4FE',
     padding: 11,
     marginTop: 16,
   },
@@ -1781,13 +1721,13 @@ const styles = StyleSheet.create({
   ownerWaitingName: {
     color: colors.textPrimary,
     fontFamily: fonts.semiBold,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
   },
   ownerWaitingMeta: {
     color: colors.textSecondary,
     fontFamily: fonts.regular,
-    fontSize: 9,
+    fontSize: 11,
     marginTop: 4,
   },
   messageOwnerIcon: {
@@ -1807,7 +1747,7 @@ const styles = StyleSheet.create({
   cancelRequestText: {
     color: colors.error,
     fontFamily: fonts.semiBold,
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '600',
   },
   footer: {
@@ -1862,18 +1802,18 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     color: colors.primaryBrandBlue,
     fontFamily: fonts.semiBold,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
   },
   confirmationLayer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 30,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 24,
   },
   confirmationBackdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(15, 23, 42, 0.48)',
   },
   confirmationCard: {
@@ -1911,8 +1851,8 @@ const styles = StyleSheet.create({
     maxWidth: 285,
     color: colors.textSecondary,
     fontFamily: fonts.regular,
-    fontSize: 11,
-    lineHeight: 16,
+    fontSize: 13,
+    lineHeight: 18,
     textAlign: 'center',
     marginTop: 7,
   },
@@ -1934,7 +1874,7 @@ const styles = StyleSheet.create({
   keepButtonText: {
     color: colors.textPrimary,
     fontFamily: fonts.semiBold,
-    fontSize: 11.5,
+    fontSize: 12.5,
     fontWeight: '600',
   },
   discardButton: {
@@ -1948,7 +1888,7 @@ const styles = StyleSheet.create({
   discardButtonText: {
     color: colors.white,
     fontFamily: fonts.semiBold,
-    fontSize: 11.5,
+    fontSize: 12.5,
     fontWeight: '600',
   },
   pressed: {

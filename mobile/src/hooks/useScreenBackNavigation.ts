@@ -6,19 +6,22 @@ import {
   type GestureResponderHandlers,
 } from 'react-native';
 
-const IOS_EDGE_WIDTH = 30;
-const SWIPE_DISTANCE = 74;
-const SWIPE_VELOCITY = 0.55;
+const IOS_EDGE_WIDTH = 20;
+const SWIPE_DISTANCE = 100;
 
 export function useScreenBackNavigation(
   onBack?: () => void,
   enabled = true,
+  swipeEnabled = true,
 ): GestureResponderHandlers {
   const onBackRef = useRef(onBack);
   const enabledRef = useRef(enabled);
+  const swipeEnabledRef = useRef(swipeEnabled);
+  const edgeStartRef = useRef(false);
 
   onBackRef.current = onBack;
   enabledRef.current = enabled;
+  swipeEnabledRef.current = swipeEnabled;
 
   useEffect(() => {
     if (Platform.OS !== 'android' || !enabled) return undefined;
@@ -38,12 +41,19 @@ export function useScreenBackNavigation(
   const panResponder = useMemo(
     () =>
       PanResponder.create({
+        onStartShouldSetPanResponderCapture: (event) => {
+          const { pageX, touches } = event.nativeEvent;
+          edgeStartRef.current = touches.length === 1 && Number.isFinite(pageX) && pageX >= 0 && pageX <= IOS_EDGE_WIDTH;
+          return false;
+        },
         onMoveShouldSetPanResponderCapture: (_, gesture) => {
+          if (gesture.numberActiveTouches !== 1) edgeStartRef.current = false;
           if (
             Platform.OS !== 'ios' ||
             !enabledRef.current ||
             !onBackRef.current ||
-            gesture.x0 > IOS_EDGE_WIDTH
+            !swipeEnabledRef.current ||
+            !edgeStartRef.current
           ) {
             return false;
           }
@@ -52,21 +62,24 @@ export function useScreenBackNavigation(
           const verticalMotion = Math.abs(gesture.dy);
 
           return (
-            gesture.dx > 10 &&
-            horizontalMotion > verticalMotion * 1.25
+            gesture.dx >= 30 &&
+            horizontalMotion > verticalMotion * 2
           );
         },
         onPanResponderRelease: (_, gesture) => {
-          if (!enabledRef.current || !onBackRef.current) return;
+          const startedAtEdge = edgeStartRef.current;
+          edgeStartRef.current = false;
+          if (!enabledRef.current || !swipeEnabledRef.current || !startedAtEdge || !onBackRef.current) return;
 
           if (
-            gesture.dx >= SWIPE_DISTANCE ||
-            (gesture.dx >= 34 && gesture.vx >= SWIPE_VELOCITY)
+            gesture.dx >= SWIPE_DISTANCE &&
+            gesture.dx > Math.abs(gesture.dy) * 2
           ) {
             onBackRef.current();
           }
         },
         onPanResponderTerminationRequest: () => true,
+        onPanResponderTerminate: () => { edgeStartRef.current = false; },
       }),
     [],
   );

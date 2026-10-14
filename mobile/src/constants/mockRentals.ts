@@ -1,15 +1,15 @@
 import type { RentalRecord } from '../types/rental';
-import { MOCK_NEARBY_VEHICLES } from './mockVehicles';
+import { MOCK_HOME_VEHICLES } from './mockVehicles';
 
-const toyotaVanguard = MOCK_NEARBY_VEHICLES[0];
-const rangeRover = MOCK_NEARBY_VEHICLES[1];
-const mercedes = MOCK_NEARBY_VEHICLES[2];
-const toyotaLandCruiser = MOCK_NEARBY_VEHICLES[3];
+const toyotaYaris = MOCK_HOME_VEHICLES.find(({ id }) => id === 'toyota-yaris-2010')!;
+const toyotaYaris2013 = MOCK_HOME_VEHICLES.find(({ id }) => id === 'toyota-yaris-2013')!;
+const toyotaYaris2012 = MOCK_HOME_VEHICLES.find(({ id }) => id === 'toyota-yaris-2012')!;
+const toyota4Runner = MOCK_HOME_VEHICLES.find(({ id }) => id === 'toyota-4runner')!;
 
 export const MOCK_ACTIVE_RENTAL: RentalRecord = {
   id: 'rental-active-toyota',
   bookingReference: 'LTGR13',
-  vehicle: toyotaVanguard,
+  vehicle: toyota4Runner,
   status: 'active',
   pickupType: 'Delivered',
   pickupLocation: 'Bonapriso, Dla',
@@ -28,9 +28,28 @@ export const MOCK_ACTIVE_RENTAL: RentalRecord = {
 
 export const MOCK_UPCOMING_RENTALS: RentalRecord[] = [
   {
+    id: 'rental-upcoming-4runner',
+    bookingReference: 'T4RN02',
+    vehicle: toyota4Runner,
+    status: 'confirmed',
+    pickupType: 'Pickup',
+    pickupLocation: 'Bonaberi, Dla',
+    totalPaidXaf: 90000,
+    depositXaf: 25000,
+    driver: 'Self drive',
+    insured: 'Included',
+    startDate: 'Oct 2, 2026',
+    startTime: '9:00 AM',
+    pickupDate: 'Oct 2, 2026',
+    pickupTime: '9:00 AM',
+    endDate: 'Oct 4, 2026',
+    endTime: '9:00 AM',
+    durationLabel: '2 Days',
+  },
+  {
     id: 'rental-upcoming-range-rover',
     bookingReference: 'RNGR28',
-    vehicle: rangeRover,
+    vehicle: toyotaYaris2013,
     status: 'confirmed',
     pickupType: 'Pickup',
     pickupLocation: 'Bonaberi, Dla',
@@ -50,9 +69,47 @@ export const MOCK_UPCOMING_RENTALS: RentalRecord[] = [
 
 export const MOCK_RENTAL_HISTORY: RentalRecord[] = [
   {
+    id: 'rental-completed-yaris-2010',
+    bookingReference: 'TYRS12',
+    vehicle: toyotaYaris,
+    status: 'completed',
+    pickupType: 'Pickup',
+    pickupLocation: 'Bonaberi, Dla',
+    totalPaidXaf: 50000,
+    depositXaf: 25000,
+    driver: 'Self drive',
+    insured: 'Included',
+    startDate: 'Sep 12, 2026',
+    startTime: '9:00 AM',
+    pickupDate: 'Sep 12, 2026',
+    pickupTime: '9:00 AM',
+    endDate: 'Sep 14, 2026',
+    endTime: '9:00 AM',
+    durationLabel: '2 Days',
+  },
+  {
+    id: 'rental-canceled-yaris-2012',
+    bookingReference: 'TYRS05',
+    vehicle: toyotaYaris2012,
+    status: 'canceled',
+    pickupType: 'Pickup',
+    pickupLocation: 'Akwa, Dla',
+    totalPaidXaf: 0,
+    depositXaf: 0,
+    driver: 'Self drive',
+    insured: 'Included',
+    startDate: 'Sep 5, 2026',
+    startTime: '10:00 AM',
+    pickupDate: 'Sep 5, 2026',
+    pickupTime: '10:00 AM',
+    endDate: 'Sep 6, 2026',
+    endTime: '10:00 AM',
+    durationLabel: '1 Day',
+  },
+  {
     id: 'rental-completed-mercedes',
     bookingReference: 'MBGL52',
-    vehicle: mercedes,
+    vehicle: toyotaYaris2013,
     status: 'completed',
     pickupType: 'Pickup',
     pickupLocation: 'Akwa, Dla',
@@ -71,7 +128,7 @@ export const MOCK_RENTAL_HISTORY: RentalRecord[] = [
   {
     id: 'rental-completed-land-cruiser',
     bookingReference: 'TYLC09',
-    vehicle: toyotaLandCruiser,
+    vehicle: toyota4Runner,
     status: 'completed',
     pickupType: 'Delivered',
     pickupLocation: 'Bonamoussadi, Dla',
@@ -90,7 +147,7 @@ export const MOCK_RENTAL_HISTORY: RentalRecord[] = [
   {
     id: 'rental-canceled-range-rover',
     bookingReference: 'RNGR16',
-    vehicle: rangeRover,
+    vehicle: toyotaYaris2012,
     status: 'canceled',
     pickupType: 'Pickup',
     pickupLocation: 'Bali, Dla',

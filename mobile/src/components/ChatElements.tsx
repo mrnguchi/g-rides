@@ -190,7 +190,7 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
   },
   unreadConversationCard: {
-    backgroundColor: '#F8FBFF',
+    backgroundColor: '#EDF4FE',
   },
   avatarContainer: {
     width: 56,
@@ -243,13 +243,13 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     color: colors.textPrimary,
     fontFamily: fonts.semiBold,
-    fontSize: 14.5,
+    fontSize: 15.5,
     fontWeight: '600',
   },
   messageTime: {
     color: colors.textSecondary,
     fontFamily: fonts.regular,
-    fontSize: 9.5,
+    fontSize: 11.5,
   },
   unreadMessageTime: {
     color: colors.primaryBrandBlue,
@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
   participantRole: {
     color: colors.textSecondary,
     fontFamily: fonts.regular,
-    fontSize: 9.5,
+    fontSize: 11.5,
     marginTop: 2,
   },
   previewRow: {
@@ -273,7 +273,7 @@ const styles = StyleSheet.create({
     flex: 1,
     color: colors.textSecondary,
     fontFamily: fonts.regular,
-    fontSize: 11.5,
+    fontSize: 12.5,
   },
   unreadMessagePreview: {
     color: colors.textPrimary,
@@ -292,7 +292,7 @@ const styles = StyleSheet.create({
   unreadBadgeText: {
     color: colors.white,
     fontFamily: fonts.semiBold,
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: '600',
   },
   bookingContext: {
@@ -315,7 +315,7 @@ const styles = StyleSheet.create({
     maxWidth: 205,
     color: colors.primaryBrandBlue,
     fontFamily: fonts.medium,
-    fontSize: 8.5,
+    fontSize: 10.5,
     fontWeight: '500',
   },
   messageRow: {

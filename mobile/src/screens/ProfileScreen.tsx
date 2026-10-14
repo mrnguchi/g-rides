@@ -1,5 +1,5 @@
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import {
   Image,
   Modal,
@@ -23,6 +23,7 @@ import {
   type MainTab,
 } from '../components';
 import { useScreenBackNavigation } from '../hooks/useScreenBackNavigation';
+import { NotificationPreferencesSheet } from '../components/NotificationPreferencesSheet';
 import {
   colors,
   controlHeights,
@@ -37,9 +38,11 @@ import {
 import type { UserRole } from '../types/user';
 
 type ProfileScreenProps = {
+  bottomNavigation?: ReactNode;
   activeRole: UserRole;
   enabledRoles: UserRole[];
-  notificationCount?: number;
+  notificationPreferences: Record<string, boolean>;
+  onSaveNotificationPreferences: (value: Record<string, boolean>) => void;
   onLogout?: () => void;
   onOpenGarage?: () => void;
   onRoleChange: (role: UserRole) => void;
@@ -99,6 +102,7 @@ function ProfileMenuRow({
         <AppIcon
           color={colors.primaryBrandBlue}
           name={icon}
+          solid={icon === 'favorite'}
           size={iconSizes.control}
         />
       </View>
@@ -126,9 +130,11 @@ function MenuDivider() {
 }
 
 export function ProfileScreen({
+  bottomNavigation,
   activeRole,
   enabledRoles,
-  notificationCount = 0,
+  notificationPreferences,
+  onSaveNotificationPreferences,
   onLogout,
   onOpenGarage,
   onRoleChange,
@@ -137,6 +143,7 @@ export function ProfileScreen({
 }: ProfileScreenProps) {
   const safeAreaInsets = useSafeAreaInsets();
   const [isLogoutVisible, setIsLogoutVisible] = useState(false);
+  const [notificationSettingsVisible, setNotificationSettingsVisible] = useState(false);
   const [isRoleSwitcherVisible, setIsRoleSwitcherVisible] = useState(false);
   const [notice, setNotice] = useState<string>();
   const logoutBackGestureHandlers = useScreenBackNavigation(
@@ -148,6 +155,7 @@ export function ProfileScreen({
     initialWindowMetrics?.insets.bottom ?? 0,
   );
   const activeRolePresentation = rolePresentation[activeRole];
+  const isRenter = activeRole === 'renter';
 
   useEffect(() => {
     if (!notice) return undefined;
@@ -179,7 +187,7 @@ export function ProfileScreen({
 
   return (
     <View style={styles.screen}>
-      <StatusBar backgroundColor={surfaces.canvas} style="dark" />
+      <StatusBar style="dark" />
 
       <SafeAreaView edges={['top']} style={styles.safeArea}>
         <View style={styles.header}>
@@ -207,6 +215,7 @@ export function ProfileScreen({
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.profileCard}>
+            <View style={styles.profileIdentity}>
             <View style={styles.avatarContainer}>
               <Image source={profileImage} style={styles.avatar} />
               <View style={styles.verifiedBadge}>
@@ -227,7 +236,7 @@ export function ProfileScreen({
               </Text>
               <View style={styles.profileStatusPill}>
                 <View style={styles.profileStatusDot} />
-                <Text style={styles.profileStatusText}>Verified account</Text>
+                <Text style={styles.profileStatusText}>{isRenter ? 'Verified renter' : 'Verified account'}</Text>
               </View>
             </View>
 
@@ -246,46 +255,27 @@ export function ProfileScreen({
                 size={iconSizes.control}
               />
             </Pressable>
+            </View>
+            <View style={styles.profileSwitchRow}>
+              <View style={styles.profileSwitchCopy}>
+                <Text style={styles.profileSwitchTitle}>{activeRolePresentation.label} profile</Text>
+                <Text style={styles.profileSwitchHint}>Use G-Rides in another role.</Text>
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Switch profile"
+                onPress={() => setIsRoleSwitcherVisible(true)}
+                style={({ pressed }) => [styles.profileSwitchButton, pressed && styles.pressed]}
+              >
+                <AppIcon name="swap" color={colors.white} size={18} />
+                <Text style={styles.profileSwitchButtonText}>Switch profile</Text>
+              </Pressable>
+            </View>
           </View>
 
-          <Pressable
-            accessibilityLabel="Switch G-Rides workspace"
-            accessibilityRole="button"
-            onPress={() => setIsRoleSwitcherVisible(true)}
-            style={({ pressed }) => [
-              styles.workspaceCard,
-              pressed && styles.workspaceCardPressed,
-            ]}
-          >
-            <View style={styles.workspaceIconContainer}>
-              <AppIcon
-                color={colors.white}
-                name={activeRolePresentation.icon}
-                size={iconSizes.feature}
-                strokeWidth={1.8}
-              />
-            </View>
-            <View style={styles.workspaceCopy}>
-              <Text style={styles.workspaceEyebrow}>ACTIVE WORKSPACE</Text>
-              <Text style={styles.workspaceTitle}>
-                {activeRolePresentation.label}
-              </Text>
-              <Text numberOfLines={2} style={styles.workspaceDescription}>
-                {activeRolePresentation.description}
-              </Text>
-            </View>
-            <View style={styles.switchButton}>
-              <AppIcon
-                color={colors.primaryBrandBlue}
-                name="swap"
-                size={18}
-                strokeWidth={1.8}
-              />
-              <Text style={styles.switchButtonText}>Switch</Text>
-            </View>
-          </Pressable>
 
-          <Pressable
+
+          {!isRenter && <Pressable
             accessibilityRole="button"
             onPress={openMyVehicles}
             style={({ pressed }) => [
@@ -316,7 +306,7 @@ export function ProfileScreen({
                 strokeWidth={1.8}
               />
             </View>
-          </Pressable>
+          </Pressable>}
 
           <Text style={styles.sectionLabel}>Account</Text>
           <View style={styles.menuGroup}>
@@ -334,6 +324,15 @@ export function ProfileScreen({
               subtitle="Your account is verified"
               value="Verified"
             />
+            {isRenter && <>
+              <MenuDivider />
+              <ProfileMenuRow
+                icon="license"
+                label="Driving licence"
+                onPress={() => openPlaceholder('Driving licence')}
+                subtitle="Your licence and rental documents"
+              />
+            </>}
             <MenuDivider />
             <ProfileMenuRow
               icon="security"
@@ -345,11 +344,8 @@ export function ProfileScreen({
             <ProfileMenuRow
               icon="notification"
               label="Notifications"
-              onPress={() => openPlaceholder('Notification preferences')}
-              subtitle="Bookings, services and message alerts"
-              value={
-                notificationCount > 0 ? `${notificationCount} new` : undefined
-              }
+              onPress={() => setNotificationSettingsVisible(true)}
+              subtitle="Choose your notification preferences"
             />
           </View>
 
@@ -373,7 +369,7 @@ export function ProfileScreen({
               icon="location"
               label="Saved locations"
               onPress={() => openPlaceholder('Saved locations')}
-              subtitle="Pickup, delivery and service addresses"
+              subtitle="Your preferred pickup and delivery addresses"
             />
             <MenuDivider />
             <ProfileMenuRow
@@ -446,11 +442,13 @@ export function ProfileScreen({
         </View>
       )}
 
-      <HomeBottomNavigation
+      {bottomNavigation ?? <HomeBottomNavigation
         activeTab="profile"
         onTabPress={onTabPress}
         unreadMessagesCount={unreadMessagesCount}
-      />
+      />}
+
+      {notificationSettingsVisible && <NotificationPreferencesSheet preferences={notificationPreferences} onSave={onSaveNotificationPreferences} onClose={() => setNotificationSettingsVisible(false)} />}
 
       <RoleSwitchSheet
         activeRole={activeRole}
@@ -566,15 +564,19 @@ const styles = StyleSheet.create({
     paddingBottom: 132,
   },
   profileCard: {
-    minHeight: 110,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
+    minHeight: 196,
     borderRadius: radii.xl,
     backgroundColor: surfaces.raised,
     padding: spacing.md,
     ...shadows.soft,
   },
+  profileIdentity: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: 6 },
+  profileSwitchRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGray, marginTop: 20, paddingTop: 16 },
+  profileSwitchCopy: { flexGrow: 1, flexBasis: 135 },
+  profileSwitchTitle: { fontFamily: fonts.medium, fontSize: 13, color: colors.textPrimary },
+  profileSwitchHint: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 18, color: colors.textSecondary, marginTop: 4 },
+  profileSwitchButton: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingHorizontal: 15, paddingVertical: 10, borderRadius: radii.pill, backgroundColor: colors.primaryBrandBlue },
+  profileSwitchButtonText: { fontFamily: fonts.semiBold, fontSize: 13, color: colors.white },
   avatarContainer: {
     width: 72,
     height: 72,
@@ -610,7 +612,7 @@ const styles = StyleSheet.create({
   profileEmail: {
     color: colors.textSecondary,
     fontFamily: fonts.regular,
-    fontSize: 11.5,
+    fontSize: 12.5,
     marginTop: 4,
   },
   profileStatusPill: {
@@ -633,7 +635,7 @@ const styles = StyleSheet.create({
   profileStatusText: {
     color: colors.success,
     fontFamily: fonts.semiBold,
-    fontSize: 9.5,
+    fontSize: 12,
     fontWeight: '600',
   },
   editButton: {
@@ -650,7 +652,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 11,
     borderRadius: radii.xl,
-    backgroundColor: colors.primaryDark,
+    backgroundColor: colors.primaryBrandBlue,
     padding: 14,
     marginTop: spacing.md,
     ...shadows.soft,
@@ -665,16 +667,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 18,
-    backgroundColor: colors.primaryBrandBlue,
+    backgroundColor: 'rgba(255,255,255,0.16)',
   },
   workspaceCopy: {
     minWidth: 0,
     flex: 1,
   },
   workspaceEyebrow: {
-    color: colors.trackingGlow,
+    color: colors.white,
     fontFamily: fonts.semiBold,
-    fontSize: 9,
+    fontSize: 12,
     fontWeight: '600',
     letterSpacing: 0.85,
   },
@@ -686,10 +688,10 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
   workspaceDescription: {
-    color: 'rgba(255,255,255,0.66)',
+    color: colors.white,
     fontFamily: fonts.regular,
-    fontSize: 10.5,
-    lineHeight: 14,
+    fontSize: 12,
+    lineHeight: 16,
     marginTop: 3,
   },
   switchButton: {
@@ -704,7 +706,7 @@ const styles = StyleSheet.create({
   switchButtonText: {
     color: colors.primaryBrandBlue,
     fontFamily: fonts.semiBold,
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '600',
   },
   vehicleFeatureCard: {
@@ -736,7 +738,7 @@ const styles = StyleSheet.create({
   vehicleFeatureEyebrow: {
     color: colors.primaryBrandBlue,
     fontFamily: fonts.semiBold,
-    fontSize: 9,
+    fontSize: 12,
     fontWeight: '600',
     letterSpacing: 0.7,
   },
@@ -750,8 +752,8 @@ const styles = StyleSheet.create({
   vehicleFeatureDescription: {
     color: colors.textSecondary,
     fontFamily: fonts.regular,
-    fontSize: 10.5,
-    lineHeight: 15,
+    fontSize: 12,
+    lineHeight: 17,
     marginTop: 3,
   },
   featureArrow: {
@@ -765,7 +767,7 @@ const styles = StyleSheet.create({
   sectionLabel: {
     color: colors.textPrimary,
     fontFamily: fonts.semiBold,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
     marginTop: spacing.xl,
     marginBottom: 9,
@@ -803,14 +805,14 @@ const styles = StyleSheet.create({
   menuLabel: {
     color: colors.textPrimary,
     fontFamily: fonts.medium,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '500',
   },
   menuSubtitle: {
     color: colors.textSecondary,
     fontFamily: fonts.regular,
-    fontSize: 10.5,
-    lineHeight: 15,
+    fontSize: 12,
+    lineHeight: 17,
     marginTop: 4,
   },
   menuValuePill: {
@@ -823,7 +825,7 @@ const styles = StyleSheet.create({
   menuValue: {
     color: colors.primaryBrandBlue,
     fontFamily: fonts.semiBold,
-    fontSize: 9.5,
+    fontSize: 12,
     fontWeight: '600',
     textAlign: 'right',
   },
@@ -856,13 +858,13 @@ const styles = StyleSheet.create({
   versionBrand: {
     color: colors.textPrimary,
     fontFamily: fonts.semiBold,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
   },
   versionText: {
     color: colors.textSecondary,
     fontFamily: fonts.regular,
-    fontSize: 9.5,
+    fontSize: 12,
     marginTop: 2,
   },
   logoutButton: {
@@ -877,7 +879,7 @@ const styles = StyleSheet.create({
   logoutText: {
     color: colors.error,
     fontFamily: fonts.semiBold,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
   },
   notice: {
@@ -891,7 +893,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     borderRadius: radii.md,
-    backgroundColor: colors.primaryDark,
+    backgroundColor: colors.primaryBrandBlue,
     paddingHorizontal: 14,
     paddingVertical: 10,
     ...shadows.floating,
@@ -900,16 +902,16 @@ const styles = StyleSheet.create({
     flex: 1,
     color: colors.white,
     fontFamily: fonts.medium,
-    fontSize: 11.5,
+    fontSize: 12.5,
     fontWeight: '500',
-    lineHeight: 16,
+    lineHeight: 18,
   },
   logoutModalRoot: {
     flex: 1,
     justifyContent: 'flex-end',
   },
   logoutBackdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(15, 23, 42, 0.55)',
   },
   logoutSheet: {
@@ -946,8 +948,8 @@ const styles = StyleSheet.create({
     maxWidth: 310,
     color: colors.textSecondary,
     fontFamily: fonts.regular,
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: 13,
+    lineHeight: 20,
     textAlign: 'center',
     marginTop: 7,
   },
@@ -968,7 +970,7 @@ const styles = StyleSheet.create({
   stayButtonText: {
     color: colors.textPrimary,
     fontFamily: fonts.semiBold,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
   },
   confirmLogoutButton: {
@@ -986,7 +988,7 @@ const styles = StyleSheet.create({
   confirmLogoutText: {
     color: colors.white,
     fontFamily: fonts.semiBold,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
   },
   pressed: {

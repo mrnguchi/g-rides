@@ -153,6 +153,7 @@ function CarsMapSurface({
     <MapView
       ref={mapRef}
       customMapStyle={mutedMapStyle}
+      provider={PROVIDER_GOOGLE}
       initialRegion={{
         ...center,
         latitudeDelta: 0.012,
@@ -171,13 +172,12 @@ function CarsMapSurface({
       onPress={onMapPress}
       paddingAdjustmentBehavior="never"
       pitchEnabled={interactive && expanded}
-      provider={PROVIDER_GOOGLE}
       rotateEnabled={interactive && expanded}
       scrollEnabled={interactive}
       showsBuildings={false}
       showsCompass={interactive && expanded}
       showsIndoors={false}
-      showsPointsOfInterest={false}
+      showsPointsOfInterests={false}
       style={StyleSheet.absoluteFill}
       toolbarEnabled={false}
       zoomEnabled={interactive}
@@ -296,6 +296,7 @@ export function NearbyCarsMap({
   const fullMapBackGestureHandlers = useScreenBackNavigation(
     closeFullMap,
     isFullMapVisible,
+    false,
   );
 
   const searchFullMapLocation = async () => {
@@ -464,7 +465,7 @@ export function NearbyCarsMap({
             { paddingBottom: fullMapBottomInset },
           ]}
         >
-          <StatusBar backgroundColor={colors.white} style="dark" />
+          <StatusBar style="dark" />
           <View
             style={[
               styles.fullMapHeader,
@@ -674,7 +675,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#2563EB',
   },
   mapActivationLayer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'flex-start',
     paddingTop: 14,

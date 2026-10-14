@@ -2,6 +2,7 @@ import type { ImageSourcePropType } from 'react-native';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors, fonts } from '../theme';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 type RoleCardProps = {
   description: string;
@@ -12,6 +13,7 @@ type RoleCardProps = {
   onPress: () => void;
   selected: boolean;
   title: string;
+  expanded?: boolean;
 };
 
 export function RoleCard({
@@ -23,7 +25,16 @@ export function RoleCard({
   onPress,
   selected,
   title,
+  expanded = false,
 }: RoleCardProps) {
+  if (expanded) return <Pressable accessibilityRole="checkbox" accessibilityLabel={`${title}: ${description}`} accessibilityState={{ checked: selected }} onPress={onPress} style={({ pressed }) => [expandedStyles.card, { minHeight: height }, pressed && styles.pressed]}>
+    <View style={expandedStyles.artwork}><Image source={image} resizeMode="contain" style={expandedStyles.image} /></View>
+    <View style={expandedStyles.content}>
+      <View style={expandedStyles.titleRow}><View style={styles.iconBadge}><Image source={icon} style={styles.icon} /></View><Text style={expandedStyles.title}>{title}</Text></View>
+      <Text style={expandedStyles.description}>{description}</Text>
+      <View style={[expandedStyles.selection, selected && expandedStyles.selected]}><Ionicons name={selected ? 'checkmark-circle' : 'add-circle-outline'} size={22} color={colors.primaryBrandBlue} /><Text style={expandedStyles.selectionText}>{selected ? 'Selected' : 'Select this role'}</Text></View>
+    </View>
+  </Pressable>;
   const imageElement = (
     <View
       style={[
@@ -166,4 +177,17 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     backgroundColor: colors.primaryBrandBlue,
   },
+});
+
+const expandedStyles = StyleSheet.create({
+  card: { backgroundColor: colors.white, borderRadius: 28, shadowColor: colors.primaryDark, shadowOffset: { width: 0, height: 7 }, shadowOpacity: 0.08, shadowRadius: 18, elevation: 4 },
+  artwork: { height: 215, borderTopLeftRadius: 28, borderTopRightRadius: 28, overflow: 'hidden', backgroundColor: '#F4F6FC', paddingTop: 12 },
+  image: { width: '100%', height: '100%' },
+  content: { padding: 22, gap: 14, flexGrow: 1 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  title: { flex: 1, fontFamily: fonts.semiBold, fontSize: 22, lineHeight: 28, color: colors.textPrimary },
+  description: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 23, color: colors.textSecondary },
+  selection: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9, minHeight: 46, paddingHorizontal: 12, borderRadius: 23, borderWidth: 1, borderColor: '#DCE5FA', marginTop: 'auto' },
+  selected: { backgroundColor: '#EDF2FF', borderColor: '#EDF2FF' },
+  selectionText: { fontFamily: fonts.medium, fontSize: 14, color: colors.primaryBrandBlue },
 });

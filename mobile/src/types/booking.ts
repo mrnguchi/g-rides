@@ -18,7 +18,8 @@ export type BookingRequest = {
   pickupTime: string;
   rentalAmountXaf: number;
   startDate: string;
-  status: 'pending';
+  status: 'pending' | 'canceled';
+  handoverAddress?: string;
   totalDueAfterApprovalXaf: number;
   vehicle: Vehicle;
 };

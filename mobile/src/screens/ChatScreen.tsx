@@ -96,7 +96,7 @@ export function ChatScreen({
       keyboardVerticalOffset={0}
       style={styles.screen}
     >
-      <StatusBar backgroundColor={colors.white} style="dark" />
+      <StatusBar style="dark" />
 
       <SafeAreaView edges={['top']} style={styles.headerSafeArea}>
         <View style={styles.header}>
@@ -163,8 +163,9 @@ export function ChatScreen({
 
       {conversation.vehicle && (
         <Pressable
-          accessibilityHint="Opens the vehicle details"
-          accessibilityRole="button"
+          accessibilityHint={onOpenVehicle ? 'Opens the vehicle details' : undefined}
+          accessibilityRole={onOpenVehicle ? 'button' : undefined}
+          disabled={!onOpenVehicle}
           onPress={onOpenVehicle}
           style={({ pressed }) => [styles.contextBar, pressed && styles.pressed]}
         >
@@ -177,14 +178,14 @@ export function ChatScreen({
               {conversation.vehicle.brand} {conversation.vehicle.model}
             </Text>
           </View>
-          <View style={styles.contextAction}>
+          {onOpenVehicle && <View style={styles.contextAction}>
             <Text style={styles.contextActionText}>View car</Text>
             <Ionicons
               color={colors.primaryBrandBlue}
               name="chevron-forward"
               size={17}
             />
-          </View>
+          </View>}
         </Pressable>
       )}
 
@@ -578,7 +579,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 18,
-    backgroundColor: '#F4F7FB',
+    backgroundColor: '#EDF4FE',
   },
   contextBar: {
     minHeight: 67,
@@ -722,12 +723,12 @@ const styles = StyleSheet.create({
     lineHeight: 15,
   },
   quickActionLayer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 110,
     justifyContent: 'flex-end',
   },
   quickActionBackdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(15, 23, 42, 0.48)',
   },
   quickActionSheet: {
@@ -838,7 +839,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 11,
     borderRadius: 13,
-    backgroundColor: '#F7F9FC',
+    backgroundColor: '#EDF4FE',
     paddingHorizontal: 11,
   },
   attachmentOptionPressed: {
@@ -861,11 +862,11 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   optionsLayer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 100,
   },
   optionsBackdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(15, 23, 42, 0.12)',
   },
   optionsMenu: {

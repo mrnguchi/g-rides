@@ -3,7 +3,7 @@ import { memo, useEffect, useState } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { Callout, Marker } from 'react-native-maps';
 
-import { colors, fonts } from '../theme';
+import { colors, fonts, moneyText } from '../theme';
 import type { Vehicle } from '../types/map';
 
 type VehicleMapMarkerProps = {
@@ -89,7 +89,7 @@ export const VehicleMapMarker = memo(function VehicleMapMarker({
             {vehicle.model}
           </Text>
           <Text style={styles.calloutMeta}>
-            {vehicle.pricePerDayXaf.toLocaleString('en-US')} XAF/day ·{' '}
+            <Text style={moneyText}>{vehicle.pricePerDayXaf.toLocaleString('en-US')} XAF</Text>/day ·{' '}
             {vehicle.distanceKm} km
           </Text>
         </View>

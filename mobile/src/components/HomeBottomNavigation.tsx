@@ -1,13 +1,11 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   colors,
   fonts,
   layout,
-  radii,
   shadows,
-  surfaces,
 } from '../theme';
 import type { MainTab } from '../types/navigation';
 import { AppIcon, type AppIconName } from './AppIcon';
@@ -49,9 +47,24 @@ export function HomeBottomNavigation({
   onTabPress,
   unreadMessagesCount = 0,
 }: HomeBottomNavigationProps) {
+  return <WorkspaceBottomNavigation activeTab={activeTab} onTabPress={onTabPress} unreadMessagesCount={unreadMessagesCount} tabs={tabs} />;
+}
+
+export function WorkspaceBottomNavigation<T extends string>({
+  activeTab,
+  onTabPress,
+  unreadMessagesCount = 0,
+  tabs,
+}: {
+  activeTab: T;
+  onTabPress?: (tab: T) => void;
+  unreadMessagesCount?: number;
+  tabs: Array<{ key: T; label: string; icon: AppIconName }>;
+}) {
+  const insets = useSafeAreaInsets();
   return (
     <SafeAreaView edges={['bottom']} pointerEvents="box-none" style={styles.safeArea}>
-      <View style={styles.navigation}>
+      <View style={[styles.navigation, { transform: [{ translateY: Math.min(6, insets.bottom) }] }]}>
         {tabs.map((tab) => {
           const active = tab.key === activeTab;
 
@@ -74,7 +87,7 @@ export function HomeBottomNavigation({
             >
               <View>
                 <AppIcon
-                  color={active ? colors.white : colors.textSecondary}
+                  color={active ? colors.white : '#DAE3FF'}
                   name={tab.icon}
                   size={23}
                   solid={active}
@@ -84,9 +97,9 @@ export function HomeBottomNavigation({
                   <View style={styles.notificationDot} />
                 )}
               </View>
-              <Text style={[styles.label, active && styles.activeLabel]}>
+              {active && <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={[styles.label, styles.activeLabel]}>
                 {tab.label}
-              </Text>
+              </Text>}
             </Pressable>
           );
         })}
@@ -103,39 +116,45 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     paddingHorizontal: layout.screenGutter,
+    paddingBottom: 0,
   },
   navigation: {
-    height: 74,
+    minHeight: 62,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    borderRadius: radii.xl,
-    backgroundColor: surfaces.raised,
+    borderRadius: 38,
+    backgroundColor: colors.primaryDark,
     padding: 6,
     ...shadows.floating,
-    transform: [{ translateY: 6 }],
   },
   tab: {
-    minWidth: 56,
-    minHeight: 60,
+    flex: 1,
+    minWidth: 40,
+    minHeight: 50,
+    flexDirection: 'row',
+    gap: 6,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 18,
-    paddingHorizontal: 5,
+    borderRadius: 30,
+    paddingHorizontal: 2,
     paddingVertical: 5,
   },
   activeTab: {
+    flex: 2.8,
+    minWidth: 0,
+    paddingHorizontal: 10,
     backgroundColor: colors.primaryBrandBlue,
   },
   tabPressed: {
     opacity: 0.62,
   },
   label: {
-    color: colors.textSecondary,
+    color: '#DAE3FF',
     fontFamily: fonts.medium,
-    fontSize: 9,
+    fontSize: 12,
     fontWeight: '500',
-    marginTop: 5,
+    flexShrink: 1,
   },
   activeLabel: {
     color: colors.white,
@@ -149,7 +168,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderWidth: 1,
-    borderColor: colors.white,
+    borderColor: colors.primaryDark,
     borderRadius: 3,
     backgroundColor: colors.error,
   },

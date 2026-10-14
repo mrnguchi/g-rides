@@ -286,7 +286,7 @@ const styles = StyleSheet.create({
   },
   selectedVehicleRow: {
     borderColor: colors.primaryBrandBlue,
-    backgroundColor: '#F7FAFF',
+    backgroundColor: '#EDF4FE',
   },
   vehicleImage: {
     width: 78,

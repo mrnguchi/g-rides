@@ -51,12 +51,12 @@ const notificationPresentation: Record<
     icon: 'car-sport-outline',
   },
   discovery: {
-    background: '#F0F7FF',
+    background: '#EDF4FE',
     color: '#2563EB',
     icon: 'location-outline',
   },
   message: {
-    background: '#F1F0FF',
+    background: '#EDF4FE',
     color: '#6558D9',
     icon: 'chatbubble-ellipses-outline',
   },
@@ -414,8 +414,8 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   unreadNotificationCard: {
-    borderColor: '#D4E4FB',
-    backgroundColor: '#FAFCFF',
+    borderColor: '#EDF4FE',
+    backgroundColor: '#EDF4FE',
   },
   notificationCardPressed: {
     opacity: 0.75,
@@ -514,7 +514,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 51,
-    backgroundColor: '#F4F7FB',
+    backgroundColor: '#EDF4FE',
   },
   emptyIconInner: {
     width: 70,
@@ -522,7 +522,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 35,
-    backgroundColor: '#E8F1FD',
+    backgroundColor: '#EDF4FE',
   },
   emptyIcon: {
     width: 37,

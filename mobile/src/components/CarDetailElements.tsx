@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#EAF2FF',
+    backgroundColor: '#EDF4FE',
   },
   specIcon: {
     width: 19,
@@ -190,7 +190,7 @@ const styles = StyleSheet.create({
     borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#EAF2FF',
+    backgroundColor: '#EDF4FE',
   },
   infoIcon: {
     width: 19,
@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     borderRadius: 6,
-    backgroundColor: '#EAF2FF',
+    backgroundColor: '#EDF4FE',
     paddingHorizontal: 6,
     paddingVertical: 6,
   },
@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
     borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#EAF2FF',
+    backgroundColor: '#EDF4FE',
   },
   policyIcon: {
     width: 18,

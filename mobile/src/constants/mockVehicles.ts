@@ -7,6 +7,22 @@ export const BONASSAMA_COORDINATE: Coordinate = {
 
 export const MOCK_NEARBY_VEHICLES: Vehicle[] = [
   {
+    id: 'toyota-yaris-2010',
+    rentalTerms: { depositXaf: 25000, pickupLocation: 'Bonaberi, Douala', deliveryFeeXaf: 2000, chauffeurFeePerDayXaf: 15000 },
+    transmission: 'Automatic',
+    seats: 5,
+    brand: 'Toyota',
+    model: 'Yaris 2010',
+    category: 'Sedans',
+    coordinate: { latitude: 4.0899, longitude: 9.6761 },
+    distanceKm: 0.7,
+    pricePerDayXaf: 25000,
+    rating: 4.7,
+    available: true,
+    image: require('../../assets/images/cars/toyota/Yaris/yaris 2010.png'),
+    markerImage: require('../../assets/images/map-car-2.png'),
+  },
+  {
     id: 'toyota-land-cruiser-black',
     brand: 'Toyota',
     model: 'Vanguard 2010',
@@ -84,3 +100,34 @@ export const MOCK_RECOMMENDED_VEHICLES = recommendedVehicleIds.flatMap(
     return vehicle ? [vehicle] : [];
   },
 );
+
+// Customer Home only displays models with supplied assets in the cars folder.
+// Keep this separate from legacy discovery/rental mock records until those
+// screens are migrated to the new image catalogue.
+export const MOCK_HOME_VEHICLES: Vehicle[] = [
+  MOCK_NEARBY_VEHICLES[0],
+  {
+    ...MOCK_NEARBY_VEHICLES[0],
+    id: 'toyota-yaris-2012',
+    model: 'Yaris 2012',
+    image: require('../../assets/images/cars/toyota/Yaris/yaris 2012.png'),
+    pricePerDayXaf: 27000,
+  },
+  {
+    ...MOCK_NEARBY_VEHICLES[0],
+    id: 'toyota-yaris-2013',
+    model: 'Yaris 2013',
+    image: require('../../assets/images/cars/toyota/Yaris/yaris 2013.png'),
+    pricePerDayXaf: 28000,
+  },
+  {
+    ...MOCK_NEARBY_VEHICLES[0],
+    id: 'toyota-4runner',
+    rentalTerms: { depositXaf: 40000, pickupLocation: 'Bonapriso, Douala', deliveryFeeXaf: 3500, chauffeurFeePerDayXaf: 20000 },
+    seats: 7,
+    model: '4Runner',
+    category: 'SUVs',
+    image: require('../../assets/images/cars/toyota/4runner/toyota 4runner.png'),
+    pricePerDayXaf: 45000,
+  },
+];

@@ -6,6 +6,7 @@ import {
   Modal,
   PanResponder,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -45,13 +46,13 @@ type RoleOption = {
 
 const roleOptions: RoleOption[] = [
   {
-    description: 'Rent vehicles and access every G-Rides service.',
+    description: 'Find a car for your next trip and book vehicle services.',
     icon: require('../../assets/images/user.png'),
     id: 'renter',
     label: 'Customer',
   },
   {
-    description: 'List vehicles and manage booking requests.',
+    description: 'List your cars, manage bookings and track your earnings.',
     icon: require('../../assets/images/car.png'),
     id: 'owner',
     label: 'Car Owner',
@@ -118,7 +119,7 @@ export function RoleSwitchSheet({
       <View style={styles.modalRoot} {...backGestureHandlers}>
         <StatusBar style="light" />
         <Pressable
-          accessibilityLabel="Close workspace switcher"
+          accessibilityLabel="Close profile switcher"
           accessibilityRole="button"
           onPress={onClose}
           style={styles.backdrop}
@@ -131,14 +132,13 @@ export function RoleSwitchSheet({
 
           <View style={styles.header}>
             <View style={styles.headerCopy}>
-              <Text style={styles.eyebrow}>YOUR G-RIDES EXPERIENCE</Text>
-              <Text style={styles.title}>Switch workspace</Text>
+              <Text style={styles.title}>Switch profile</Text>
               <Text style={styles.subtitle}>
-                Choose the workspace you want to use right now.
+                How would you like to use G-Rides?
               </Text>
             </View>
             <Pressable
-              accessibilityLabel="Close workspace switcher"
+              accessibilityLabel="Close profile switcher"
               accessibilityRole="button"
               hitSlop={8}
               onPress={onClose}
@@ -151,6 +151,7 @@ export function RoleSwitchSheet({
             </Pressable>
           </View>
 
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
           <View style={styles.roleList}>
             {roleOptions.map((role) => {
               const active = role.id === activeRole;
@@ -211,7 +212,7 @@ export function RoleSwitchSheet({
                                 : styles.setupStatusText,
                           ]}
                         >
-                          {active ? 'Active' : enabled ? 'Ready' : 'Set up'}
+                          {active ? 'Current' : enabled ? 'Available' : 'Get started'}
                         </Text>
                       </View>
                     </View>
@@ -233,11 +234,10 @@ export function RoleSwitchSheet({
               solid
             />
             <Text style={styles.roleNoteText}>
-              Switching workspaces keeps the same account, messages and
-              security settings.
+              Choose a profile to continue. You can switch back at any time.
             </Text>
           </View>
-
+          </ScrollView>
           <View
             style={[
               styles.footer,
@@ -262,10 +262,10 @@ export function RoleSwitchSheet({
                 ]}
               >
                 {selectedRoleIsActive
-                  ? `${selectedOption.label} is active`
+                  ? 'Current profile'
                   : selectedRoleIsEnabled
                     ? `Switch to ${selectedOption.label}`
-                    : `Set up ${selectedOption.label}`}
+                    : `Get started as ${selectedOption.label}`}
               </Text>
               {!selectedRoleIsActive && (
                 <AppIcon
@@ -289,10 +289,11 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(15, 23, 42, 0.55)',
   },
   sheet: {
+    maxHeight: '90%',
     overflow: 'hidden',
     borderTopLeftRadius: radii.sheet,
     borderTopRightRadius: radii.sheet,
@@ -337,7 +338,8 @@ const styles = StyleSheet.create({
   subtitle: {
     color: colors.textSecondary,
     fontFamily: fonts.regular,
-    fontSize: 10.5,
+    fontSize: 14,
+    lineHeight: 21,
     marginTop: 5,
   },
   closeButton: {
@@ -348,24 +350,22 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: surfaces.muted,
   },
+  scrollContent: { paddingTop: 8, paddingBottom: 16 },
   roleList: {
-    gap: 10,
+    gap: 16,
     paddingHorizontal: layout.screenGutter,
   },
   roleCard: {
-    minHeight: 88,
+    minHeight: 112,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    borderWidth: 1.2,
-    borderColor: colors.borderGray,
     borderRadius: radii.lg,
     backgroundColor: surfaces.raised,
-    padding: 11,
+    padding: 16,
     ...shadows.soft,
   },
   selectedRoleCard: {
-    borderColor: colors.primaryBrandBlue,
     backgroundColor: surfaces.blueSoft,
   },
   roleIconContainer: {
@@ -388,6 +388,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   roleTitleRow: {
+    flexWrap: 'wrap',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 7,
@@ -395,7 +396,7 @@ const styles = StyleSheet.create({
   roleTitle: {
     color: colors.textPrimary,
     fontFamily: fonts.semiBold,
-    fontSize: 14,
+    fontSize: 17,
     fontWeight: '600',
   },
   statusPill: {
@@ -414,7 +415,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontFamily: fonts.medium,
-    fontSize: 8,
+    fontSize: 11,
     fontWeight: '500',
   },
   activeStatusText: {
@@ -429,8 +430,8 @@ const styles = StyleSheet.create({
   roleDescription: {
     color: colors.textSecondary,
     fontFamily: fonts.regular,
-    fontSize: 9.5,
-    lineHeight: 14,
+    fontSize: 13,
+    lineHeight: 20,
     marginTop: 5,
   },
   radio: {
@@ -465,12 +466,10 @@ const styles = StyleSheet.create({
     flex: 1,
     color: colors.textSecondary,
     fontFamily: fonts.regular,
-    fontSize: 9.5,
-    lineHeight: 14,
+    fontSize: 13,
+    lineHeight: 20,
   },
   footer: {
-    borderTopWidth: 1,
-    borderTopColor: '#EEF1F5',
     backgroundColor: surfaces.raised,
     paddingHorizontal: layout.screenGutter,
     paddingTop: 12,

@@ -171,7 +171,7 @@ export function MyVehiclesScreen({
         }
       : {
           ...values,
-          documents: [],
+          documents: values.documents ?? [],
           id: `garage-vehicle-${Date.now()}`,
           image: fallbackVehicleImage,
           ownerUserId: 'current-user',

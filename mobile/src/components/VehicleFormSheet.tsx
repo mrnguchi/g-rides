@@ -16,6 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useScreenBackNavigation } from '../hooks/useScreenBackNavigation';
+import { OwnerVehicleFormSheet } from './OwnerVehicleFormSheet';
 import { colors, fonts, layout } from '../theme';
 import type { UserRole } from '../types/user';
 import type {
@@ -23,9 +24,13 @@ import type {
   TransmissionType,
   UserVehicle,
   UserVehicleRelationship,
+  VehicleDocument,
+  VehiclePhoto,
 } from '../types/vehicle';
 
 export type VehicleFormValues = {
+  ownerPhotos?: VehiclePhoto[];
+  documents?: VehicleDocument[];
   category: string;
   fuelType: FuelType;
   make: string;
@@ -95,7 +100,13 @@ function InputField({
   );
 }
 
-export function VehicleFormSheet({
+export function VehicleFormSheet(props: VehicleFormSheetProps) {
+  return props.activeRole === 'owner' && !props.initialVehicle
+    ? <OwnerVehicleFormSheet visible={props.visible} onClose={props.onClose} onSave={props.onSave} />
+    : <LegacyVehicleFormSheet {...props} />;
+}
+
+function LegacyVehicleFormSheet({
   activeRole,
   initialVehicle,
   onClose,
@@ -448,7 +459,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(15, 23, 42, 0.55)',
   },
   sheetSafeArea: {

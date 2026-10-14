@@ -12,7 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useScreenBackNavigation } from '../hooks/useScreenBackNavigation';
-import { colors, fonts, layout } from '../theme';
+import { colors, fonts, layout, moneyText } from '../theme';
 
 export type PaymentMethod = 'mtnMomo' | 'orangeMoney';
 
@@ -276,10 +276,8 @@ const styles = StyleSheet.create({
   },
   amount: {
     color: colors.white,
-    fontFamily: fonts.bold,
     fontSize: 18,
-    fontWeight: '700',
-  },
+     ...moneyText },
   sectionLabel: {
     color: colors.textPrimary,
     fontFamily: fonts.semiBold,
@@ -305,7 +303,7 @@ const styles = StyleSheet.create({
   },
   selectedMethodCard: {
     borderColor: colors.primaryBrandBlue,
-    backgroundColor: '#F5F9FF',
+    backgroundColor: '#EDF4FE',
   },
   pressedMethodCard: {
     opacity: 0.78,
@@ -320,7 +318,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceGray,
   },
   selectedMethodIconContainer: {
-    backgroundColor: '#E6F0FE',
+    backgroundColor: '#EDF4FE',
   },
   methodIcon: {
     width: 44,

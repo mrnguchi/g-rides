@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors, fonts } from '../theme';
+import { colors, fonts, moneyText } from '../theme';
 import type { Vehicle } from '../types/map';
 import { LocationIcon } from './LocationIcon';
 
@@ -68,7 +68,7 @@ export function VehicleCard({
           >
             <Ionicons
               color={colors.primaryBrandBlue}
-              name={favorite ? 'heart' : 'heart-outline'}
+              name={favorite ? 'bookmark' : 'bookmark-outline'}
               size={19}
             />
           </Pressable>
@@ -262,10 +262,8 @@ const styles = StyleSheet.create({
   },
   price: {
     color: colors.primaryBrandBlue,
-    fontFamily: fonts.semiBold,
     fontSize: 15,
-    fontWeight: '600',
-  },
+     ...moneyText },
   perDay: {
     color: colors.textSecondary,
     fontFamily: fonts.regular,

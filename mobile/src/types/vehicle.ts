@@ -28,6 +28,10 @@ export type VehicleDocumentKind =
 export type VehicleDocumentStatus = 'expired' | 'pending' | 'verified';
 
 export type VehicleDocument = {
+  uri?: string;
+  fileName?: string;
+  sizeBytes?: number;
+  mimeType?: string;
   expiresAt?: string;
   id: string;
   kind: VehicleDocumentKind;
@@ -41,6 +45,7 @@ export type VehicleDocument = {
  * migrated. Every new service vertical should reference this model.
  */
 export type UserVehicle = {
+  ownerPhotos?: readonly VehiclePhoto[];
   assignedUserId?: string;
   category: string;
   documents: readonly VehicleDocument[];
@@ -58,4 +63,12 @@ export type UserVehicle = {
   transmission: TransmissionType;
   vin?: string;
   year: number;
+};
+
+export type VehiclePhoto = {
+  id: string;
+  uri: string;
+  assetId?: string;
+  fileName?: string;
+  sizeBytes?: number;
 };
